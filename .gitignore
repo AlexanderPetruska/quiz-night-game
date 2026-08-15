@@ -36,3 +36,4 @@ Thumbs.db
 # a local quiz data folder inside the project tree by mistake.
 /quiz-data/
 /quiz-content/
+/QuizNightData/
