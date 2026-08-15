@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { SlideFrame } from "@/screens/presentation/SlideFrame";
-import { stopAdvance } from "@/screens/presentation/interaction";
 import type { Team } from "@/types";
 
 interface FinalSlideProps {
@@ -35,7 +34,14 @@ export function FinalSlide({ teams, onEnd }: FinalSlideProps) {
           );
         })}
       </div>
-      <Button size="lg" className="mt-12" onClick={onEnd} onClickCapture={stopAdvance}>
+      <Button
+        size="lg"
+        className="mt-12"
+        onClick={(e) => {
+          e.stopPropagation();
+          onEnd();
+        }}
+      >
         End Presentation
       </Button>
     </SlideFrame>

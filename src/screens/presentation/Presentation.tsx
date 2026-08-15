@@ -347,7 +347,7 @@ export function Presentation({ slug }: PresentationProps) {
       {currentSlide?.kind === "final" && <FinalSlide teams={teams} onEnd={handleEnd} />}
 
       <Dialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
-        <DialogContent onClickCapture={(e) => e.stopPropagation()}>
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Exit presentation?</DialogTitle>
             <DialogDescription>
