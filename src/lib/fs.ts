@@ -128,9 +128,18 @@ export interface NamedSubdir {
 
 export async function listSubdirs(dirHandle: FileSystemDirectoryHandle): Promise<NamedSubdir[]> {
   const results: NamedSubdir[] = [];
-  for await (const [name, handle] of dirHandle.entries()) {
-    if (handle.kind === "directory") {
-      results.push({ name, handle: handle as FileSystemDirectoryHandle });
+  try {
+    for await (const [name, handle] of dirHandle.entries()) {
+      if (handle.kind === "directory") {
+        results.push({ name, handle: handle as FileSystemDirectoryHandle });
+      }
+    }
+  } catch (error) {
+    // On folders synced by iCloud/Dropbox/OneDrive/etc., the sync client can create or
+    // remove entries while we're mid-iteration, which surfaces as a NotFoundError here.
+    // Return what we managed to collect rather than failing the whole listing.
+    if (!(error instanceof DOMException && error.name === "NotFoundError")) {
+      throw error;
     }
   }
   return results;

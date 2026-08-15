@@ -73,7 +73,8 @@ export function MyQuizzes() {
       await refresh();
       toast.success('Added "Example Quiz".');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not add the example quiz.");
+      const detail = err instanceof Error ? err.message : "unknown error";
+      toast.error(`Could not add the example quiz: ${detail}`);
     } finally {
       setSeedingExample(false);
     }
