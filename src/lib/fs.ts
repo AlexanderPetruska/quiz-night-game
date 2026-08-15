@@ -9,11 +9,16 @@ export async function verifyPermission(
   mode: PermissionMode = "readwrite",
 ): Promise<boolean> {
   const options = { mode };
-  if ((await handle.queryPermission(options)) === "granted") {
-    return true;
-  }
-  if ((await handle.requestPermission(options)) === "granted") {
-    return true;
+  try {
+    if ((await handle.queryPermission(options)) === "granted") {
+      return true;
+    }
+    if ((await handle.requestPermission(options)) === "granted") {
+      return true;
+    }
+  } catch {
+    // Some browsers throw (rather than resolve to a denied state) when requestPermission
+    // is called without an active user gesture — treat that the same as "not granted".
   }
   return false;
 }
@@ -26,10 +31,26 @@ export async function pickRootDirectory(): Promise<FileSystemDirectoryHandle> {
   });
 }
 
+/**
+ * Re-confirms write permission right before a write. A single check at app startup isn't
+ * enough — that check runs with no active user gesture, so the browser can silently fail to
+ * (re-)grant permission there. Calling this from inside a click handler gives the browser a
+ * valid moment to prompt again if needed.
+ */
+async function ensureWritable(handle: FileSystemDirectoryHandle): Promise<void> {
+  const granted = await verifyPermission(handle, "readwrite");
+  if (!granted) {
+    throw new Error(
+      "Permission to write to your quiz data folder was lost. Reload the app and reconnect your data folder, then try again.",
+    );
+  }
+}
+
 export async function getOrCreateSubdir(
   parent: FileSystemDirectoryHandle,
   name: string,
 ): Promise<FileSystemDirectoryHandle> {
+  await ensureWritable(parent);
   return parent.getDirectoryHandle(name, { create: true });
 }
 
@@ -65,6 +86,7 @@ export async function writeJson(
   filename: string,
   data: unknown,
 ): Promise<void> {
+  await ensureWritable(dirHandle);
   const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
   const writable = await fileHandle.createWritable();
   await writable.write(JSON.stringify(data, null, 2));
@@ -76,6 +98,7 @@ export async function writeBinaryFile(
   filename: string,
   file: File | Blob,
 ): Promise<void> {
+  await ensureWritable(dirHandle);
   const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
   const writable = await fileHandle.createWritable();
   await writable.write(file);
@@ -87,6 +110,7 @@ export async function deleteEntry(
   name: string,
   recursive = false,
 ): Promise<void> {
+  await ensureWritable(dirHandle);
   try {
     await dirHandle.removeEntry(name, { recursive });
   } catch (error) {
