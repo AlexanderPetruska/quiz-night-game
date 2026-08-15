@@ -26,7 +26,7 @@ interface QuizRow {
 type DeleteTarget = { kind: "quiz"; slug: string; name: string } | { kind: "orphan"; slug: string };
 
 export function MyQuizzes() {
-  const { root, navigate } = useAppContext();
+  const { root, navigate, reportRootUnavailable } = useAppContext();
   const [quizzes, setQuizzes] = useState<QuizRow[]>([]);
   const [orphanedFolders, setOrphanedFolders] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,10 +39,21 @@ export function MyQuizzes() {
 
   async function refresh() {
     setLoading(true);
-    const [list, orphaned] = await Promise.all([listQuizzes(root), listOrphanedQuizDirs(root)]);
-    setQuizzes(list);
-    setOrphanedFolders(orphaned);
-    setLoading(false);
+    try {
+      const [list, orphaned] = await Promise.all([listQuizzes(root), listOrphanedQuizDirs(root)]);
+      setQuizzes(list);
+      setOrphanedFolders(orphaned);
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Your data folder isn't accessible anymore. Please choose it again.",
+      );
+      reportRootUnavailable();
+      return;
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {

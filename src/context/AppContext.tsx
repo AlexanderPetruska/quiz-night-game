@@ -13,6 +13,8 @@ export interface AppContextValue {
   jokers: Joker[];
   refreshJokers: () => Promise<void>;
   navigate: (screen: Screen) => void;
+  /** Call when an operation discovers the data folder is no longer reachable — sends the user back to the folder picker. */
+  reportRootUnavailable: () => void;
 }
 
 export const AppContext = createContext<AppContextValue | undefined>(undefined);

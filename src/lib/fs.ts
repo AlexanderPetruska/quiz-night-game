@@ -2,6 +2,31 @@ export function isFileSystemAccessSupported(): boolean {
   return typeof window !== "undefined" && "showDirectoryPicker" in window;
 }
 
+/** Thrown when the selected data folder can no longer be reached — e.g. moved, renamed, or deleted. */
+export class RootFolderUnavailableError extends Error {
+  constructor() {
+    super("Your quiz data folder could not be reached. It may have been moved, renamed, or deleted.");
+    this.name = "RootFolderUnavailableError";
+  }
+}
+
+/**
+ * Some File System Access operations (notably iterating a deleted directory's entries) hang
+ * indefinitely instead of rejecting when their target no longer exists. This bounds any such
+ * call so the UI can recover instead of showing a permanent loading state.
+ */
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new RootFolderUnavailableError()), ms);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer!);
+  }
+}
+
 export type PermissionMode = "read" | "readwrite";
 
 export async function verifyPermission(
@@ -129,20 +154,47 @@ export interface NamedSubdir {
 export async function listSubdirs(dirHandle: FileSystemDirectoryHandle): Promise<NamedSubdir[]> {
   const results: NamedSubdir[] = [];
   try {
-    for await (const [name, handle] of dirHandle.entries()) {
-      if (handle.kind === "directory") {
-        results.push({ name, handle: handle as FileSystemDirectoryHandle });
-      }
-    }
+    await withTimeout(
+      (async () => {
+        for await (const [name, handle] of dirHandle.entries()) {
+          if (handle.kind === "directory") {
+            results.push({ name, handle: handle as FileSystemDirectoryHandle });
+          }
+        }
+      })(),
+      8000,
+    );
   } catch (error) {
     // On folders synced by iCloud/Dropbox/OneDrive/etc., the sync client can create or
     // remove entries while we're mid-iteration, which surfaces as a NotFoundError here.
     // Return what we managed to collect rather than failing the whole listing.
-    if (!(error instanceof DOMException && error.name === "NotFoundError")) {
-      throw error;
+    if (error instanceof DOMException && error.name === "NotFoundError") {
+      return results;
     }
+    throw error;
   }
   return results;
+}
+
+/**
+ * Confirms the root folder can actually still be read, not just that permission is granted —
+ * a deleted/moved folder can still report permission as granted since that's tracked
+ * separately from whether the target still exists.
+ */
+export async function verifyRootAccessible(root: FileSystemDirectoryHandle): Promise<boolean> {
+  try {
+    await withTimeout(
+      (async () => {
+        for await (const _ of root.values()) {
+          break;
+        }
+      })(),
+      6000,
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function slugify(text: string): string {

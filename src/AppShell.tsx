@@ -11,7 +11,12 @@ import { TeamSetup } from "@/screens/TeamSetup";
 import { Presentation } from "@/screens/presentation/Presentation";
 import type { Joker } from "@/types";
 
-export function AppShell({ root }: { root: FileSystemDirectoryHandle }) {
+interface AppShellProps {
+  root: FileSystemDirectoryHandle;
+  onRootUnavailable: () => void;
+}
+
+export function AppShell({ root, onRootUnavailable }: AppShellProps) {
   const [screen, setScreen] = useState<Screen>({ name: "myQuizzes" });
   const [jokers, setJokers] = useState<Joker[]>([]);
   const [loadingJokers, setLoadingJokers] = useState(true);
@@ -29,7 +34,7 @@ export function AppShell({ root }: { root: FileSystemDirectoryHandle }) {
 
   if (loadingJokers) return <LoadingScreen />;
 
-  const value: AppContextValue = { root, jokers, refreshJokers, navigate };
+  const value: AppContextValue = { root, jokers, refreshJokers, navigate, reportRootUnavailable: onRootUnavailable };
   const showNav = screen.name !== "presentation";
 
   return (

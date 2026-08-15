@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/AppShell";
 import { Toaster } from "@/components/ui/sonner";
-import { isFileSystemAccessSupported, verifyPermission } from "@/lib/fs";
-import { getStoredRootHandle } from "@/lib/idb";
+import { isFileSystemAccessSupported, verifyPermission, verifyRootAccessible } from "@/lib/fs";
+import { clearStoredRootHandle, getStoredRootHandle } from "@/lib/idb";
 import { LoadingScreen } from "@/screens/LoadingScreen";
 import { UnsupportedBrowser } from "@/screens/UnsupportedBrowser";
 import { Welcome } from "@/screens/Welcome";
@@ -25,14 +25,20 @@ function App() {
       const stored = await getStoredRootHandle();
       if (stored) {
         const granted = await verifyPermission(stored, "readwrite");
-        if (granted) {
+        if (granted && (await verifyRootAccessible(stored))) {
           setBoot({ status: "ready", root: stored });
           return;
         }
+        await clearStoredRootHandle();
       }
       setBoot({ status: "needsFolder" });
     }
     void bootstrap();
+  }, []);
+
+  const handleRootUnavailable = useCallback(() => {
+    void clearStoredRootHandle();
+    setBoot({ status: "needsFolder" });
   }, []);
 
   return (
@@ -42,7 +48,7 @@ function App() {
       {boot.status === "needsFolder" && (
         <Welcome onFolderReady={(root) => setBoot({ status: "ready", root })} />
       )}
-      {boot.status === "ready" && <AppShell root={boot.root} />}
+      {boot.status === "ready" && <AppShell root={boot.root} onRootUnavailable={handleRootUnavailable} />}
       <Toaster richColors position="top-center" />
     </>
   );
