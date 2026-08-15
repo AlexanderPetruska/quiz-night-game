@@ -37,6 +37,9 @@ export function RevealSlide({
   onAdvance,
   isLast,
 }: RevealSlideProps) {
+  const allScored = teams.every((t) => scoredTeamIds.has(t.id));
+  const remaining = teams.length - scoredTeamIds.size;
+
   return (
     <SlideFrame slideKey={`reveal-${question.id}`} onAdvance={onAdvance}>
       <h2 className="mb-6 text-2xl font-medium text-muted-foreground">Correct Answer</h2>
@@ -165,9 +168,15 @@ export function RevealSlide({
         })}
       </div>
 
+      {!allScored && (
+        <p className="mt-10 text-sm text-muted-foreground">
+          Score {remaining} more team{remaining === 1 ? "" : "s"} to continue.
+        </p>
+      )}
       <Button
         size="lg"
-        className="mt-10"
+        className={allScored ? "mt-4" : "mt-2"}
+        disabled={!allScored}
         onClick={(e) => {
           e.stopPropagation();
           onAdvance();

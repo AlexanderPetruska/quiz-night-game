@@ -108,8 +108,13 @@ export function Presentation({ slug }: PresentationProps) {
   const currentSlide = slidePlan[currentIndex];
 
   const advance = useCallback(() => {
+    if (currentSlide?.kind === "reveal") {
+      const question = questions[currentSlide.qIndex];
+      const fullyScored = teams.every((t) => scoredKeys.has(keyFor(question.id, t.id)));
+      if (!fullyScored) return;
+    }
     setCurrentIndex((i) => Math.min(i + 1, slidePlan.length - 1));
-  }, [slidePlan.length]);
+  }, [slidePlan.length, currentSlide, questions, teams, scoredKeys]);
 
   const back = useCallback(() => {
     setCurrentIndex((i) => Math.max(i - 1, 0));
