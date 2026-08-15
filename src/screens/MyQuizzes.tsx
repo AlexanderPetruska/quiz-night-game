@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppContext } from "@/context/AppContext";
-import { createQuiz, deleteQuiz, listOrphanedQuizDirs, listQuizzes } from "@/lib/store";
+import { createQuiz, deleteQuiz, listOrphanedQuizDirs, listQuizzes, seedExampleQuiz } from "@/lib/store";
 import type { QuizSummary } from "@/types";
 
 interface QuizRow {
@@ -35,6 +35,7 @@ export function MyQuizzes() {
   const [creating, setCreating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | undefined>();
   const [deleting, setDeleting] = useState(false);
+  const [seedingExample, setSeedingExample] = useState(false);
 
   async function refresh() {
     setLoading(true);
@@ -65,6 +66,19 @@ export function MyQuizzes() {
     }
   }
 
+  async function handleAddExample() {
+    setSeedingExample(true);
+    try {
+      await seedExampleQuiz(root);
+      await refresh();
+      toast.success('Added "Example Quiz".');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not add the example quiz.");
+    } finally {
+      setSeedingExample(false);
+    }
+  }
+
   async function handleDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -89,34 +103,39 @@ export function MyQuizzes() {
           <h1 className="text-3xl font-semibold tracking-tight">My Quizzes</h1>
           <p className="text-muted-foreground">Create and manage your quiz nights.</p>
         </div>
-        <Dialog open={newQuizOpen} onOpenChange={setNewQuizOpen}>
-          <DialogTrigger render={<Button size="lg" />}>+ New Quiz</DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>New Quiz</DialogTitle>
-              <DialogDescription>Give your new quiz a name. You can rename it later.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-2">
-              <Label htmlFor="quiz-name">Quiz name</Label>
-              <Input
-                id="quiz-name"
-                value={newQuizName}
-                onChange={(e) => setNewQuizName(e.target.value)}
-                placeholder="e.g. Friday Night Trivia"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void handleCreate();
-                }}
-                autoFocus
-              />
-            </div>
-            <DialogFooter>
-              <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
-              <Button onClick={handleCreate} disabled={!newQuizName.trim() || creating}>
-                {creating ? "Creating…" : "Create Quiz"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleAddExample} disabled={seedingExample}>
+            {seedingExample ? "Adding…" : "+ Add Example Quiz"}
+          </Button>
+          <Dialog open={newQuizOpen} onOpenChange={setNewQuizOpen}>
+            <DialogTrigger render={<Button size="lg" />}>+ New Quiz</DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>New Quiz</DialogTitle>
+                <DialogDescription>Give your new quiz a name. You can rename it later.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-2">
+                <Label htmlFor="quiz-name">Quiz name</Label>
+                <Input
+                  id="quiz-name"
+                  value={newQuizName}
+                  onChange={(e) => setNewQuizName(e.target.value)}
+                  placeholder="e.g. Friday Night Trivia"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void handleCreate();
+                  }}
+                  autoFocus
+                />
+              </div>
+              <DialogFooter>
+                <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+                <Button onClick={handleCreate} disabled={!newQuizName.trim() || creating}>
+                  {creating ? "Creating…" : "Create Quiz"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {loading && <p className="text-muted-foreground">Loading quizzes…</p>}

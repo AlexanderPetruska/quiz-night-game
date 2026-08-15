@@ -147,12 +147,27 @@ export async function deleteProofFile(quizDir: FileSystemDirectoryHandle, filena
   await deleteEntry(proofDir, filename);
 }
 
-/** Seeds a starter quiz with mock questions and mock teams so a first-time user has something to explore. */
+/**
+ * Builds a simple, self-contained SVG "proof reveal" image — no external assets or binary
+ * encoding needed, just a string. Used to give the seeded example quiz something to show on
+ * the proof slide without bundling real media files.
+ */
+function buildMockProofSvg(emoji: string, title: string, subtitle: string, bg: string): Blob {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="${bg}"/>
+  <text x="640" y="300" font-size="180" text-anchor="middle" dominant-baseline="middle">${emoji}</text>
+  <text x="640" y="440" font-size="72" font-family="system-ui, sans-serif" font-weight="700" fill="#ffffff" text-anchor="middle">${title}</text>
+  <text x="640" y="500" font-size="34" font-family="system-ui, sans-serif" fill="#d4d4d8" text-anchor="middle">${subtitle}</text>
+</svg>`;
+  return new Blob([svg], { type: "image/svg+xml" });
+}
+
+/** Seeds a starter quiz with mock questions, mock proof images, and mock teams so a first-time user has something to explore. */
 export async function seedExampleQuiz(root: FileSystemDirectoryHandle): Promise<void> {
   const quizzesDir = await getQuizzesDir(root);
   const slug = await uniqueSlug(quizzesDir, "Example Quiz");
   const quizDir = await getOrCreateSubdir(quizzesDir, slug);
-  await getProofDir(quizDir);
+  const proofDir = await getProofDir(quizDir);
 
   const meta: QuizMeta = {
     id: newId(),
@@ -162,6 +177,16 @@ export async function seedExampleQuiz(root: FileSystemDirectoryHandle): Promise<
     jokerUsesPerTeam: {},
   };
   await writeJson(quizDir, "quiz.json", meta);
+
+  const proofAssets = [
+    { filename: "q1_proof.svg", svg: buildMockProofSvg("🔴", "Mars", "The Red Planet", "#7c2d12") },
+    { filename: "q2_proof.svg", svg: buildMockProofSvg("🚀", "1969", "Apollo 11 Moon Landing", "#1e3a5f") },
+    { filename: "q3_proof.svg", svg: buildMockProofSvg("🌊", "Lake Champlain", "Not one of the Great Lakes", "#0c4a6e") },
+    { filename: "q4_proof.svg", svg: buildMockProofSvg("📖", "Jane Austen", "Pride and Prejudice, 1813", "#4c1d95") },
+  ];
+  for (const asset of proofAssets) {
+    await writeBinaryFile(proofDir, asset.filename, asset.svg);
+  }
 
   const questions: Question[] = [
     {
@@ -173,6 +198,8 @@ export async function seedExampleQuiz(root: FileSystemDirectoryHandle): Promise<
       category: "Science",
       order: 1,
       points: 1,
+      proofFile: "q1_proof.svg",
+      proofType: "image",
     },
     {
       id: newId(),
@@ -182,6 +209,8 @@ export async function seedExampleQuiz(root: FileSystemDirectoryHandle): Promise<
       category: "History",
       order: 2,
       points: 2,
+      proofFile: "q2_proof.svg",
+      proofType: "image",
     },
     {
       id: newId(),
@@ -192,6 +221,8 @@ export async function seedExampleQuiz(root: FileSystemDirectoryHandle): Promise<
       category: "Geography",
       order: 3,
       points: 2,
+      proofFile: "q3_proof.svg",
+      proofType: "image",
     },
     {
       id: newId(),
@@ -201,6 +232,8 @@ export async function seedExampleQuiz(root: FileSystemDirectoryHandle): Promise<
       category: "Literature",
       order: 4,
       points: 3,
+      proofFile: "q4_proof.svg",
+      proofType: "image",
     },
   ];
   await writeJson(quizDir, "questions.json", questions);
