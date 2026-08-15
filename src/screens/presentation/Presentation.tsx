@@ -73,13 +73,18 @@ export function Presentation({ slug }: PresentationProps) {
     };
   }, [root, slug]);
 
-  // Presentation mode is always dark, regardless of the system/browser theme — it's meant to
+  // Presentation mode is always dark, regardless of the user's chosen theme — it's meant to
   // be viewed on a TV in a dimmed room. Toggled on the document itself (not just a local
-  // wrapper) so portaled content like the exit-confirmation dialog picks it up too.
+  // wrapper) so portaled content like the exit-confirmation dialog picks it up too. Restores
+  // whatever was there before on exit, rather than always removing it, so this doesn't
+  // override an actual dark-mode preference once the presentation ends.
   useEffect(() => {
+    const hadDark = document.documentElement.classList.contains("dark");
     document.documentElement.classList.add("dark");
     return () => {
-      document.documentElement.classList.remove("dark");
+      if (!hadDark) {
+        document.documentElement.classList.remove("dark");
+      }
     };
   }, []);
 

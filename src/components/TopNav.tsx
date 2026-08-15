@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAppContext } from "@/context/AppContext";
 import type { Screen } from "@/context/AppContext";
 
@@ -27,6 +28,7 @@ export function TopNav({ screen }: { screen: Screen }) {
         >
           Jokers
         </Button>
+        <ThemeToggle />
       </nav>
     </header>
   );
