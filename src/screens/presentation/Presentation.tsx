@@ -19,6 +19,7 @@ import { ProofSlide } from "@/screens/presentation/ProofSlide";
 import { QuestionSlide } from "@/screens/presentation/QuestionSlide";
 import type { AwardOutcome } from "@/screens/presentation/RevealSlide";
 import { RevealSlide } from "@/screens/presentation/RevealSlide";
+import { ScoreboardPanel } from "@/screens/presentation/ScoreboardPanel";
 import { buildSlidePlan } from "@/screens/presentation/types";
 import type { Question, QuizMeta, Team } from "@/types";
 
@@ -71,6 +72,16 @@ export function Presentation({ slug }: PresentationProps) {
       cancelled = true;
     };
   }, [root, slug]);
+
+  // Presentation mode is always dark, regardless of the system/browser theme — it's meant to
+  // be viewed on a TV in a dimmed room. Toggled on the document itself (not just a local
+  // wrapper) so portaled content like the exit-confirmation dialog picks it up too.
+  useEffect(() => {
+    document.documentElement.classList.add("dark");
+    return () => {
+      document.documentElement.classList.remove("dark");
+    };
+  }, []);
 
   // Autosave teams (scores + joker usage) continuously.
   useEffect(() => {
@@ -283,8 +294,10 @@ export function Presentation({ slug }: PresentationProps) {
     return <LoadingScreen />;
   }
 
+  const showScoreboard = currentSlide?.kind !== "proof";
+
   return (
-    <div className="relative">
+    <div className="relative flex min-h-svh bg-background">
       {!isFullscreen && (
         <Button
           className="absolute right-4 top-4 z-10"
@@ -296,60 +309,64 @@ export function Presentation({ slug }: PresentationProps) {
         </Button>
       )}
 
-      {currentSlide?.kind === "intro" && (
-        <IntroSlide quizName={meta.name} teams={teams} onAdvance={advance} />
-      )}
+      <div className="min-w-0 flex-1">
+        {currentSlide?.kind === "intro" && (
+          <IntroSlide quizName={meta.name} teams={teams} onAdvance={advance} />
+        )}
 
-      {currentSlide?.kind === "question" && (
-        <QuestionSlide
-          key={questions[currentSlide.qIndex].id}
-          question={questions[currentSlide.qIndex]}
-          index={currentSlide.qIndex}
-          total={questions.length}
-          timerSeconds={meta.defaultTimerSeconds}
-          onAdvance={advance}
-        />
-      )}
+        {currentSlide?.kind === "question" && (
+          <QuestionSlide
+            key={questions[currentSlide.qIndex].id}
+            question={questions[currentSlide.qIndex]}
+            index={currentSlide.qIndex}
+            total={questions.length}
+            timerSeconds={meta.defaultTimerSeconds}
+            onAdvance={advance}
+          />
+        )}
 
-      {currentSlide?.kind === "joker" && (
-        <JokerSlide
-          question={questions[currentSlide.qIndex]}
-          teams={teams}
-          activeJokers={activeJokers}
-          onInvoke={handleInvokeJoker}
-          onUndo={handleUndoJoker}
-          onAdvance={advance}
-        />
-      )}
+        {currentSlide?.kind === "joker" && (
+          <JokerSlide
+            question={questions[currentSlide.qIndex]}
+            teams={teams}
+            activeJokers={activeJokers}
+            onInvoke={handleInvokeJoker}
+            onUndo={handleUndoJoker}
+            onAdvance={advance}
+          />
+        )}
 
-      {currentSlide?.kind === "proof" && (
-        <ProofSlide question={questions[currentSlide.qIndex]} quizDir={quizDir} onAdvance={advance} />
-      )}
+        {currentSlide?.kind === "proof" && (
+          <ProofSlide question={questions[currentSlide.qIndex]} quizDir={quizDir} onAdvance={advance} />
+        )}
 
-      {currentSlide?.kind === "reveal" && (
-        <RevealSlide
-          question={questions[currentSlide.qIndex]}
-          teams={teams}
-          jokers={jokers}
-          scoredTeamIds={
-            new Set(
-              teams
-                .filter((t) => scoredKeys.has(keyFor(questions[currentSlide.qIndex].id, t.id)))
-                .map((t) => t.id),
-            )
-          }
-          onAward={handleAward}
-          onUndoAward={handleUndoAward}
-          manualAmounts={Object.fromEntries(
-            teams.map((t) => [t.id, manualAmounts[keyFor(questions[currentSlide.qIndex].id, t.id)] ?? ""]),
-          )}
-          onManualAmountChange={handleManualAmountChange}
-          onAdvance={advance}
-          isLast={currentSlide.qIndex === questions.length - 1}
-        />
-      )}
+        {currentSlide?.kind === "reveal" && (
+          <RevealSlide
+            question={questions[currentSlide.qIndex]}
+            teams={teams}
+            jokers={jokers}
+            scoredTeamIds={
+              new Set(
+                teams
+                  .filter((t) => scoredKeys.has(keyFor(questions[currentSlide.qIndex].id, t.id)))
+                  .map((t) => t.id),
+              )
+            }
+            onAward={handleAward}
+            onUndoAward={handleUndoAward}
+            manualAmounts={Object.fromEntries(
+              teams.map((t) => [t.id, manualAmounts[keyFor(questions[currentSlide.qIndex].id, t.id)] ?? ""]),
+            )}
+            onManualAmountChange={handleManualAmountChange}
+            onAdvance={advance}
+            isLast={currentSlide.qIndex === questions.length - 1}
+          />
+        )}
 
-      {currentSlide?.kind === "final" && <FinalSlide teams={teams} onEnd={handleEnd} />}
+        {currentSlide?.kind === "final" && <FinalSlide teams={teams} onEnd={handleEnd} />}
+      </div>
+
+      {showScoreboard && <ScoreboardPanel teams={teams} />}
 
       <Dialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
         <DialogContent>

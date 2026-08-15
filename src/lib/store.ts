@@ -255,6 +255,22 @@ export async function seedExampleQuiz(root: FileSystemDirectoryHandle): Promise<
       jokersRemaining: {},
       jokerLog: [],
     },
+    {
+      id: newId(),
+      name: "Sherlock Homies",
+      members: ["Riley", "Morgan"],
+      score: 0,
+      jokersRemaining: {},
+      jokerLog: [],
+    },
+    {
+      id: newId(),
+      name: "Quiz Pistols",
+      members: ["Taylor", "Drew"],
+      score: 0,
+      jokersRemaining: {},
+      jokerLog: [],
+    },
   ];
   await writeJson(quizDir, "teams.json", teams);
 }
