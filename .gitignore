@@ -1,0 +1,38 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Env files
+.env
+.env.*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Quiz content data
+# The app lets users pick an arbitrary folder on disk (via the File System
+# Access API) at runtime for their quiz content — videos, questions, team
+# names, etc. That folder lives outside this repo entirely and must never
+# be committed here. This entry is a safety net in case anyone ever points
+# a local quiz data folder inside the project tree by mistake.
+/quiz-data/
+/quiz-content/
