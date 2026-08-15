@@ -108,6 +108,8 @@ export function MyQuizzes() {
     }
   }
 
+  const hasExampleQuiz = quizzes.some((q) => q.summary.meta.name === "Example Quiz");
+
   return (
     <div className="mx-auto max-w-5xl px-6 py-10">
       <div className="mb-8 flex items-center justify-between">
@@ -116,9 +118,11 @@ export function MyQuizzes() {
           <p className="text-muted-foreground">Create and manage your quiz nights.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleAddExample} disabled={seedingExample}>
-            {seedingExample ? "Adding…" : "+ Add Example Quiz"}
-          </Button>
+          {!loading && !hasExampleQuiz && (
+            <Button variant="outline" onClick={handleAddExample} disabled={seedingExample}>
+              {seedingExample ? "Adding…" : "+ Add Example Quiz"}
+            </Button>
+          )}
           <Dialog open={newQuizOpen} onOpenChange={setNewQuizOpen}>
             <DialogTrigger render={<Button size="lg" />}>+ New Quiz</DialogTrigger>
             <DialogContent>
