@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EFFECT_TYPES_NEEDING_TARGET } from "@/lib/jokers";
 import { SlideFrame } from "@/screens/presentation/SlideFrame";
 import { stopAdvance } from "@/screens/presentation/interaction";
 import type { Joker, Question, Team } from "@/types";
@@ -8,12 +10,33 @@ interface JokerSlideProps {
   question: Question;
   teams: Team[];
   activeJokers: Joker[];
-  onInvoke: (teamId: string, jokerId: string) => void;
+  onInvoke: (teamId: string, jokerId: string, targetTeamId?: string) => void;
   onUndo: (teamId: string) => void;
   onAdvance: () => void;
 }
 
+interface PendingTarget {
+  teamId: string;
+  joker: Joker;
+}
+
 export function JokerSlide({ question, teams, activeJokers, onInvoke, onUndo, onAdvance }: JokerSlideProps) {
+  const [pending, setPending] = useState<PendingTarget | undefined>();
+
+  function handleJokerClick(teamId: string, joker: Joker) {
+    if (EFFECT_TYPES_NEEDING_TARGET.includes(joker.effectType)) {
+      setPending({ teamId, joker });
+    } else {
+      onInvoke(teamId, joker.id);
+    }
+  }
+
+  function handlePickTarget(targetTeamId: string) {
+    if (!pending) return;
+    onInvoke(pending.teamId, pending.joker.id, targetTeamId);
+    setPending(undefined);
+  }
+
   return (
     <SlideFrame slideKey={`joker-${question.id}`} onAdvance={onAdvance}>
       <h2 className="mb-2 text-3xl font-semibold">Jokers</h2>
@@ -23,6 +46,10 @@ export function JokerSlide({ question, teams, activeJokers, onInvoke, onUndo, on
         {teams.map((team) => {
           const used = team.jokerLog.find((entry) => entry.questionId === question.id);
           const usedJoker = used ? activeJokers.find((j) => j.id === used.jokerId) : undefined;
+          const usedTargetName = used?.targetTeamId
+            ? teams.find((t) => t.id === used.targetTeamId)?.name
+            : undefined;
+          const isPickingForThisTeam = pending?.teamId === team.id;
 
           return (
             <Card key={team.id}>
@@ -30,10 +57,34 @@ export function JokerSlide({ question, teams, activeJokers, onInvoke, onUndo, on
                 <CardTitle className="text-lg">{team.name}</CardTitle>
               </CardHeader>
               <CardContent>
-                {usedJoker ? (
+                {isPickingForThisTeam ? (
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      {pending.joker.icon} {pending.joker.name} — choose a target team:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {teams.filter((t) => t.id !== team.id).length === 0 && (
+                        <p className="text-sm text-muted-foreground">No other teams to target.</p>
+                      )}
+                      {teams
+                        .filter((t) => t.id !== team.id)
+                        .map((target) => (
+                          <Button key={target.id} variant="outline" onClick={() => handlePickTarget(target.id)}>
+                            {target.name}
+                          </Button>
+                        ))}
+                      <Button variant="ghost" onClick={() => setPending(undefined)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : usedJoker ? (
                   <div className="flex items-center justify-between">
                     <p className="text-lg">
                       {usedJoker.icon} Used <span className="font-medium">{usedJoker.name}</span>
+                      {usedTargetName && (
+                        <span className="text-muted-foreground"> → {usedTargetName}</span>
+                      )}
                     </p>
                     <Button variant="ghost" size="sm" onClick={() => onUndo(team.id)}>
                       Undo
@@ -47,11 +98,7 @@ export function JokerSlide({ question, teams, activeJokers, onInvoke, onUndo, on
                       const remaining = team.jokersRemaining[joker.id] ?? 0;
                       if (remaining <= 0) return null;
                       return (
-                        <Button
-                          key={joker.id}
-                          variant="outline"
-                          onClick={() => onInvoke(team.id, joker.id)}
-                        >
+                        <Button key={joker.id} variant="outline" onClick={() => handleJokerClick(team.id, joker)}>
                           {joker.icon} {joker.name}{" "}
                           <span className="ml-1 text-xs text-muted-foreground">({remaining} left)</span>
                         </Button>

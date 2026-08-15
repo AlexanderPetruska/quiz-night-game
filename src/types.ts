@@ -48,6 +48,8 @@ export interface Question {
 export interface JokerLogEntry {
   questionId: string;
   jokerId: string;
+  /** For jokers that act on another team (steal, freeze, score swap): which team it targeted. */
+  targetTeamId?: string;
 }
 
 export interface Team {

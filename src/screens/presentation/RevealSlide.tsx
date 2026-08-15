@@ -1,16 +1,23 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { computeAwardSuggestion, jokerUsedForQuestion } from "@/lib/jokers";
+import {
+  computeAwardSuggestion,
+  getIncomingFreezes,
+  getIncomingSteals,
+  jokerUsedForQuestion,
+} from "@/lib/jokers";
 import { SlideFrame } from "@/screens/presentation/SlideFrame";
 import { stopAdvance } from "@/screens/presentation/interaction";
 import type { Joker, Question, Team } from "@/types";
+
+export type AwardOutcome = "correct" | "incorrect" | "manual" | "frozen";
 
 interface RevealSlideProps {
   question: Question;
   teams: Team[];
   jokers: Joker[];
   scoredTeamIds: Set<string>;
-  onAward: (teamId: string, amount: number) => void;
+  onAward: (teamId: string, amount: number, outcome: AwardOutcome) => void;
   onUndoAward: (teamId: string) => void;
   manualAmounts: Record<string, string>;
   onManualAmountChange: (teamId: string, value: string) => void;
@@ -66,56 +73,92 @@ export function RevealSlide({
           const suggestion = computeAwardSuggestion(question, joker);
           const scored = scoredTeamIds.has(team.id);
 
+          const freezes = getIncomingFreezes(team.id, question.id, teams, jokers);
+          const steals = getIncomingSteals(team.id, question.id, teams, jokers);
+          const isFrozen = freezes.length > 0;
+
           return (
             <div key={team.id} className="rounded-xl border bg-card p-4">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-lg font-semibold">{team.name}</span>
                 <span className="text-muted-foreground">{team.score} pts</span>
               </div>
-              {suggestion.note && <p className="mb-2 text-xs text-muted-foreground">{suggestion.note}</p>}
 
-              {!suggestion.manual ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    size="sm"
-                    disabled={scored}
-                    onClick={() => onAward(team.id, suggestion.correctAmount)}
-                    className="bg-green-600 text-white hover:bg-green-700"
-                  >
-                    Correct +{suggestion.correctAmount}
-                  </Button>
-                  <Button size="sm" variant="secondary" disabled={scored} onClick={() => onAward(team.id, suggestion.incorrectAmount)}>
-                    Incorrect {suggestion.incorrectAmount === 0 ? "+0" : suggestion.incorrectAmount}
-                  </Button>
-                  {scored && (
-                    <Button size="sm" variant="ghost" onClick={() => onUndoAward(team.id)}>
-                      Undo
+              {isFrozen ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-cyan-400">
+                    🧊 Frozen by {freezes.map((f) => f.byTeam.name).join(", ")} — scores 0 this question.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="secondary" disabled={scored} onClick={() => onAward(team.id, 0, "frozen")}>
+                      Award 0 (Frozen)
                     </Button>
-                  )}
+                    {scored && (
+                      <Button size="sm" variant="ghost" onClick={() => onUndoAward(team.id)}>
+                        Undo
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    className="w-24"
-                    placeholder="±pts"
-                    value={manualAmounts[team.id] ?? ""}
-                    onChange={(e) => onManualAmountChange(team.id, e.target.value)}
-                    disabled={scored}
-                  />
-                  <Button
-                    size="sm"
-                    disabled={scored || !manualAmounts[team.id]}
-                    onClick={() => onAward(team.id, Number(manualAmounts[team.id]) || 0)}
-                  >
-                    Apply
-                  </Button>
-                  {scored && (
-                    <Button size="sm" variant="ghost" onClick={() => onUndoAward(team.id)}>
-                      Undo
-                    </Button>
+                <>
+                  {suggestion.note && <p className="mb-2 text-xs text-muted-foreground">{suggestion.note}</p>}
+                  {steals.length > 0 && (
+                    <p className="mb-2 text-xs text-amber-400">
+                      🥷 If incorrect, {steals.map((s) => s.byTeam.name).join(", ")} will steal {question.points}{" "}
+                      pt{question.points === 1 ? "" : "s"} from this team.
+                    </p>
                   )}
-                </div>
+
+                  {!suggestion.manual ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        size="sm"
+                        disabled={scored}
+                        onClick={() => onAward(team.id, suggestion.correctAmount, "correct")}
+                        className="bg-green-600 text-white hover:bg-green-700"
+                      >
+                        Correct +{suggestion.correctAmount}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={scored}
+                        onClick={() => onAward(team.id, suggestion.incorrectAmount, "incorrect")}
+                      >
+                        Incorrect {suggestion.incorrectAmount === 0 ? "+0" : suggestion.incorrectAmount}
+                      </Button>
+                      {scored && (
+                        <Button size="sm" variant="ghost" onClick={() => onUndoAward(team.id)}>
+                          Undo
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        className="w-24"
+                        placeholder="±pts"
+                        value={manualAmounts[team.id] ?? ""}
+                        onChange={(e) => onManualAmountChange(team.id, e.target.value)}
+                        disabled={scored}
+                      />
+                      <Button
+                        size="sm"
+                        disabled={scored || !manualAmounts[team.id]}
+                        onClick={() => onAward(team.id, Number(manualAmounts[team.id]) || 0, "manual")}
+                      >
+                        Apply
+                      </Button>
+                      {scored && (
+                        <Button size="sm" variant="ghost" onClick={() => onUndoAward(team.id)}>
+                          Undo
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           );

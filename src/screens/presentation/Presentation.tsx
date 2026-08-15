@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAppContext } from "@/context/AppContext";
+import { getIncomingSteals } from "@/lib/jokers";
 import { getQuizDir, loadQuestions, loadQuizMeta, loadTeams, saveTeams } from "@/lib/store";
 import { FinalSlide } from "@/screens/presentation/FinalSlide";
 import { IntroSlide } from "@/screens/presentation/IntroSlide";
@@ -16,6 +17,7 @@ import { JokerSlide } from "@/screens/presentation/JokerSlide";
 import { LoadingScreen } from "@/screens/LoadingScreen";
 import { ProofSlide } from "@/screens/presentation/ProofSlide";
 import { QuestionSlide } from "@/screens/presentation/QuestionSlide";
+import type { AwardOutcome } from "@/screens/presentation/RevealSlide";
 import { RevealSlide } from "@/screens/presentation/RevealSlide";
 import { buildSlidePlan } from "@/screens/presentation/types";
 import type { Question, QuizMeta, Team } from "@/types";
@@ -26,6 +28,11 @@ interface PresentationProps {
 
 function keyFor(questionId: string, teamId: string): string {
   return `${questionId}:${teamId}`;
+}
+
+interface AppliedAward {
+  ownDelta: number;
+  stealTransfers?: { toTeamId: string; amount: number }[];
 }
 
 export function Presentation({ slug }: PresentationProps) {
@@ -39,7 +46,7 @@ export function Presentation({ slug }: PresentationProps) {
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [scoredKeys, setScoredKeys] = useState<Set<string>>(new Set());
-  const [appliedDeltas, setAppliedDeltas] = useState<Record<string, number>>({});
+  const [appliedDeltas, setAppliedDeltas] = useState<Record<string, AppliedAward>>({});
   const [manualAmounts, setManualAmounts] = useState<Record<string, string>>({});
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -125,57 +132,108 @@ export function Presentation({ slug }: PresentationProps) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [advance, back, showExitConfirm]);
 
-  function handleInvokeJoker(teamId: string, jokerId: string) {
+  function handleInvokeJoker(teamId: string, jokerId: string, targetTeamId?: string) {
     if (!currentSlide || currentSlide.kind !== "joker") return;
     const question = questions[currentSlide.qIndex];
-    setTeams((ts) =>
-      ts.map((t) =>
-        t.id === teamId
-          ? {
-              ...t,
-              jokersRemaining: { ...t.jokersRemaining, [jokerId]: (t.jokersRemaining[jokerId] ?? 0) - 1 },
-              jokerLog: [...t.jokerLog, { questionId: question.id, jokerId }],
-            }
-          : t,
-      ),
-    );
+    const joker = jokers.find((j) => j.id === jokerId);
+    const isScoreSwap = joker?.effectType === "scoreSwap" && !!targetTeamId;
+
+    setTeams((ts) => {
+      const invoker = ts.find((t) => t.id === teamId);
+      const target = targetTeamId ? ts.find((t) => t.id === targetTeamId) : undefined;
+      return ts.map((t) => {
+        if (t.id === teamId) {
+          return {
+            ...t,
+            score: isScoreSwap && target ? target.score : t.score,
+            jokersRemaining: { ...t.jokersRemaining, [jokerId]: (t.jokersRemaining[jokerId] ?? 0) - 1 },
+            jokerLog: [...t.jokerLog, { questionId: question.id, jokerId, targetTeamId }],
+          };
+        }
+        if (isScoreSwap && t.id === targetTeamId && invoker) {
+          return { ...t, score: invoker.score };
+        }
+        return t;
+      });
+    });
   }
 
   function handleUndoJoker(teamId: string) {
     if (!currentSlide || currentSlide.kind !== "joker") return;
     const question = questions[currentSlide.qIndex];
-    setTeams((ts) =>
-      ts.map((t) => {
-        if (t.id !== teamId) return t;
-        const entry = t.jokerLog.find((e) => e.questionId === question.id);
-        if (!entry) return t;
-        return {
-          ...t,
-          jokersRemaining: {
-            ...t.jokersRemaining,
-            [entry.jokerId]: (t.jokersRemaining[entry.jokerId] ?? 0) + 1,
-          },
-          jokerLog: t.jokerLog.filter((e) => e !== entry),
-        };
-      }),
-    );
+
+    setTeams((ts) => {
+      const team = ts.find((t) => t.id === teamId);
+      const entry = team?.jokerLog.find((e) => e.questionId === question.id);
+      if (!entry) return ts;
+      const joker = jokers.find((j) => j.id === entry.jokerId);
+      const isScoreSwap = joker?.effectType === "scoreSwap" && !!entry.targetTeamId;
+      const targetTeamId = entry.targetTeamId;
+
+      const invoker = ts.find((t) => t.id === teamId);
+      const target = targetTeamId ? ts.find((t) => t.id === targetTeamId) : undefined;
+
+      return ts.map((t) => {
+        if (t.id === teamId) {
+          return {
+            ...t,
+            score: isScoreSwap && target ? target.score : t.score,
+            jokersRemaining: {
+              ...t.jokersRemaining,
+              [entry.jokerId]: (t.jokersRemaining[entry.jokerId] ?? 0) + 1,
+            },
+            jokerLog: t.jokerLog.filter((e) => e !== entry),
+          };
+        }
+        if (isScoreSwap && t.id === targetTeamId && invoker) {
+          return { ...t, score: invoker.score };
+        }
+        return t;
+      });
+    });
   }
 
-  function handleAward(teamId: string, amount: number) {
+  function handleAward(teamId: string, amount: number, outcome: AwardOutcome) {
     if (!currentSlide || currentSlide.kind !== "reveal") return;
     const question = questions[currentSlide.qIndex];
     const k = keyFor(question.id, teamId);
-    setTeams((ts) => ts.map((t) => (t.id === teamId ? { ...t, score: t.score + amount } : t)));
+
+    let ownDelta = amount;
+    let stealTransfers: { toTeamId: string; amount: number }[] | undefined;
+
+    if (outcome === "incorrect") {
+      const steals = getIncomingSteals(teamId, question.id, teams, jokers);
+      if (steals.length > 0) {
+        stealTransfers = steals.map((s) => ({ toTeamId: s.byTeam.id, amount: question.points }));
+        ownDelta -= question.points * steals.length;
+      }
+    }
+
+    setTeams((ts) =>
+      ts.map((t) => {
+        if (t.id === teamId) return { ...t, score: t.score + ownDelta };
+        const transfer = stealTransfers?.find((s) => s.toTeamId === t.id);
+        return transfer ? { ...t, score: t.score + transfer.amount } : t;
+      }),
+    );
     setScoredKeys((prev) => new Set(prev).add(k));
-    setAppliedDeltas((prev) => ({ ...prev, [k]: amount }));
+    setAppliedDeltas((prev) => ({ ...prev, [k]: { ownDelta, stealTransfers } }));
   }
 
   function handleUndoAward(teamId: string) {
     if (!currentSlide || currentSlide.kind !== "reveal") return;
     const question = questions[currentSlide.qIndex];
     const k = keyFor(question.id, teamId);
-    const delta = appliedDeltas[k] ?? 0;
-    setTeams((ts) => ts.map((t) => (t.id === teamId ? { ...t, score: t.score - delta } : t)));
+    const record = appliedDeltas[k];
+    if (!record) return;
+
+    setTeams((ts) =>
+      ts.map((t) => {
+        if (t.id === teamId) return { ...t, score: t.score - record.ownDelta };
+        const transfer = record.stealTransfers?.find((s) => s.toTeamId === t.id);
+        return transfer ? { ...t, score: t.score - transfer.amount } : t;
+      }),
+    );
     setScoredKeys((prev) => {
       const next = new Set(prev);
       next.delete(k);

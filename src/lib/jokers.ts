@@ -16,14 +16,8 @@ export const EFFECT_TYPES_NEEDING_MULTIPLIER: JokerEffectType[] = ["multiplier",
 export const EFFECT_TYPES_NEEDING_PENALTY: JokerEffectType[] = ["hint"];
 export const EFFECT_TYPES_CHOICE_ONLY: JokerEffectType[] = ["fiftyFifty"];
 
-/** Effect types whose per-team point award can be computed automatically at reveal time. */
-export const AUTO_COMPUTED_EFFECT_TYPES: JokerEffectType[] = [
-  "multiplier",
-  "doubleOrNothing",
-  "hint",
-  "safetyNet",
-  "fiftyFifty",
-];
+/** Effect types that act on another team and need a target picked when invoked. */
+export const EFFECT_TYPES_NEEDING_TARGET: JokerEffectType[] = ["steal", "freeze", "scoreSwap"];
 
 export type StarterTemplate = Omit<Joker, "id">;
 
@@ -52,7 +46,7 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
   {
     name: "Steal",
     icon: "🥷",
-    description: "Take points from a team that answered incorrectly.",
+    description: "Take points from a chosen team if they answer incorrectly.",
     effectType: "steal",
   },
   {
@@ -77,7 +71,7 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
   {
     name: "Score Swap",
     icon: "🔄",
-    description: "Swap this team's total score with another team's total score.",
+    description: "Swap this team's total score with a chosen team's total score.",
     effectType: "scoreSwap",
   },
 ];
@@ -93,10 +87,57 @@ export interface AwardSuggestion {
   note?: string;
 }
 
+/** The joker a team invoked for a given question (a team may invoke at most one joker per question). */
 export function jokerUsedForQuestion(team: Team, questionId: string, jokers: Joker[]): Joker | undefined {
   const entry = team.jokerLog.find((log) => log.questionId === questionId);
   if (!entry) return undefined;
   return jokers.find((j) => j.id === entry.jokerId);
+}
+
+export interface IncomingTargetedJoker {
+  byTeam: Team;
+  joker: Joker;
+}
+
+/** All teams (and their joker) that targeted `targetTeamId` with `effectType` this question. */
+function incomingTargetedJokers(
+  targetTeamId: string,
+  questionId: string,
+  teams: Team[],
+  jokers: Joker[],
+  effectType: JokerEffectType,
+): IncomingTargetedJoker[] {
+  const results: IncomingTargetedJoker[] = [];
+  for (const byTeam of teams) {
+    for (const entry of byTeam.jokerLog) {
+      if (entry.questionId !== questionId || entry.targetTeamId !== targetTeamId) continue;
+      const joker = jokers.find((j) => j.id === entry.jokerId);
+      if (joker?.effectType === effectType) {
+        results.push({ byTeam, joker });
+      }
+    }
+  }
+  return results;
+}
+
+/** Teams that froze `targetTeamId` this question — if any, that team must score 0 regardless of their answer. */
+export function getIncomingFreezes(
+  targetTeamId: string,
+  questionId: string,
+  teams: Team[],
+  jokers: Joker[],
+): IncomingTargetedJoker[] {
+  return incomingTargetedJokers(targetTeamId, questionId, teams, jokers, "freeze");
+}
+
+/** Teams that will steal from `targetTeamId` this question if that team answers incorrectly. */
+export function getIncomingSteals(
+  targetTeamId: string,
+  questionId: string,
+  teams: Team[],
+  jokers: Joker[],
+): IncomingTargetedJoker[] {
+  return incomingTargetedJokers(targetTeamId, questionId, teams, jokers, "steal");
 }
 
 export function computeAwardSuggestion(question: Question, joker: Joker | undefined): AwardSuggestion {
@@ -149,25 +190,28 @@ export function computeAwardSuggestion(question: Question, joker: Joker | undefi
         note: `${joker.name}: two wrong options were eliminated before reveal.`,
       };
     case "steal":
+      // Steal doesn't change the inviting team's own award — it moves points from the target,
+      // handled separately via getIncomingSteals at reveal time.
       return {
         correctAmount: points,
         incorrectAmount: 0,
-        manual: true,
-        note: `${joker.name}: manually move points from a team that answered incorrectly.`,
+        manual: false,
+        note: `${joker.name}: played against another team — see that team's row.`,
       };
     case "freeze":
+      // Freeze doesn't change the inviting team's own award either.
       return {
         correctAmount: points,
         incorrectAmount: 0,
-        manual: true,
-        note: `${joker.name}: the frozen opposing team should score 0 this question.`,
+        manual: false,
+        note: `${joker.name}: played against another team — see that team's row.`,
       };
     case "scoreSwap":
       return {
         correctAmount: points,
         incorrectAmount: 0,
-        manual: true,
-        note: `${joker.name}: manually swap this team's total score with another team's.`,
+        manual: false,
+        note: `${joker.name}: scores were already swapped when this was played.`,
       };
     case "manual":
     default:
