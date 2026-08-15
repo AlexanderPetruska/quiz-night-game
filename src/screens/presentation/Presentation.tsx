@@ -42,6 +42,7 @@ export function Presentation({ slug }: PresentationProps) {
   const [appliedDeltas, setAppliedDeltas] = useState<Record<string, number>>({});
   const [manualAmounts, setManualAmounts] = useState<Record<string, string>>({});
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const enteredFullscreenRef = useRef(false);
 
   useEffect(() => {
@@ -76,6 +77,7 @@ export function Presentation({ slug }: PresentationProps) {
       .requestFullscreen()
       .then(() => {
         enteredFullscreenRef.current = true;
+        setIsFullscreen(true);
       })
       .catch(() => {
         /* user can enter manually via the on-screen button */
@@ -84,7 +86,9 @@ export function Presentation({ slug }: PresentationProps) {
 
   useEffect(() => {
     function onFullscreenChange() {
-      if (enteredFullscreenRef.current && !document.fullscreenElement) {
+      const fullscreen = !!document.fullscreenElement;
+      setIsFullscreen(fullscreen);
+      if (enteredFullscreenRef.current && !fullscreen) {
         setShowExitConfirm(true);
       }
     }
@@ -190,6 +194,16 @@ export function Presentation({ slug }: PresentationProps) {
     setManualAmounts((prev) => ({ ...prev, [keyFor(question.id, teamId)]: value }));
   }
 
+  async function requestFullscreenManually() {
+    try {
+      await document.documentElement.requestFullscreen();
+      enteredFullscreenRef.current = true;
+      setIsFullscreen(true);
+    } catch {
+      /* ignore — host stays in windowed mode */
+    }
+  }
+
   async function handleEnd() {
     if (document.fullscreenElement) {
       await document.exitFullscreen().catch(() => {});
@@ -198,7 +212,7 @@ export function Presentation({ slug }: PresentationProps) {
   }
 
   async function handleResumeFullscreen() {
-    await document.documentElement.requestFullscreen().catch(() => {});
+    await requestFullscreenManually();
     setShowExitConfirm(false);
   }
 
@@ -208,12 +222,12 @@ export function Presentation({ slug }: PresentationProps) {
 
   return (
     <div className="relative">
-      {!document.fullscreenElement && (
+      {!isFullscreen && (
         <Button
           className="absolute right-4 top-4 z-10"
           size="sm"
           variant="outline"
-          onClick={() => document.documentElement.requestFullscreen().catch(() => {})}
+          onClick={requestFullscreenManually}
         >
           Enter Fullscreen
         </Button>
