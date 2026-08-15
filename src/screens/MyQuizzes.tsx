@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppContext } from "@/context/AppContext";
-import { createQuiz, deleteQuiz, listQuizzes } from "@/lib/store";
+import { createQuiz, deleteQuiz, listOrphanedQuizDirs, listQuizzes } from "@/lib/store";
 import type { QuizSummary } from "@/types";
 
 interface QuizRow {
@@ -23,20 +23,24 @@ interface QuizRow {
   summary: QuizSummary;
 }
 
+type DeleteTarget = { kind: "quiz"; slug: string; name: string } | { kind: "orphan"; slug: string };
+
 export function MyQuizzes() {
   const { root, navigate } = useAppContext();
   const [quizzes, setQuizzes] = useState<QuizRow[]>([]);
+  const [orphanedFolders, setOrphanedFolders] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [newQuizOpen, setNewQuizOpen] = useState(false);
   const [newQuizName, setNewQuizName] = useState("");
   const [creating, setCreating] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<QuizRow | undefined>();
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | undefined>();
   const [deleting, setDeleting] = useState(false);
 
   async function refresh() {
     setLoading(true);
-    const list = await listQuizzes(root);
+    const [list, orphaned] = await Promise.all([listQuizzes(root), listOrphanedQuizDirs(root)]);
     setQuizzes(list);
+    setOrphanedFolders(orphaned);
     setLoading(false);
   }
 
@@ -68,9 +72,11 @@ export function MyQuizzes() {
       await deleteQuiz(root, deleteTarget.slug);
       setDeleteTarget(undefined);
       await refresh();
-      toast.success(`Deleted "${deleteTarget.summary.meta.name}".`);
+      toast.success(
+        deleteTarget.kind === "quiz" ? `Deleted "${deleteTarget.name}".` : `Deleted folder "${deleteTarget.slug}".`,
+      );
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not delete quiz.");
+      toast.error(err instanceof Error ? err.message : "Could not delete.");
     } finally {
       setDeleting(false);
     }
@@ -144,7 +150,11 @@ export function MyQuizzes() {
               >
                 Start Presentation
               </Button>
-              <Button variant="ghost" className="text-destructive" onClick={() => setDeleteTarget(quiz)}>
+              <Button
+                variant="ghost"
+                className="text-destructive"
+                onClick={() => setDeleteTarget({ kind: "quiz", slug: quiz.slug, name: quiz.summary.meta.name })}
+              >
                 Delete
               </Button>
             </CardFooter>
@@ -152,19 +162,47 @@ export function MyQuizzes() {
         ))}
       </div>
 
+      {!loading && orphanedFolders.length > 0 && (
+        <div className="mt-10">
+          <h2 className="mb-1 text-lg font-medium">Unrecognized folders</h2>
+          <p className="mb-4 text-sm text-muted-foreground">
+            These folders are inside <code>quizzes/</code> but don't have a valid quiz.json — probably
+            leftovers from a previous crash or an edit outside the app. You can remove them here.
+          </p>
+          <div className="space-y-2">
+            {orphanedFolders.map((name) => (
+              <Card key={name}>
+                <CardContent className="flex items-center justify-between py-3">
+                  <span className="font-mono text-sm text-muted-foreground">{name}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive"
+                    onClick={() => setDeleteTarget({ kind: "orphan", slug: name })}
+                  >
+                    Delete
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(undefined)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete "{deleteTarget?.summary.meta.name}"?</DialogTitle>
+            <DialogTitle>
+              Delete "{deleteTarget?.kind === "quiz" ? deleteTarget.name : deleteTarget?.slug}"?
+            </DialogTitle>
             <DialogDescription>
-              This permanently deletes the quiz, its questions, and all proof files. This cannot be
-              undone.
+              This permanently deletes the folder and everything in it. This cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
             <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? "Deleting…" : "Delete Quiz"}
+              {deleting ? "Deleting…" : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ensureRootStructure, pickRootDirectory, verifyPermission } from "@/lib/fs";
 import { setStoredRootHandle } from "@/lib/idb";
+import { seedExampleQuiz } from "@/lib/store";
 
 interface WelcomeProps {
   onFolderReady: (root: FileSystemDirectoryHandle) => void;
@@ -23,7 +24,10 @@ export function Welcome({ onFolderReady }: WelcomeProps) {
         setBusy(false);
         return;
       }
-      await ensureRootStructure(handle);
+      const { isFirstRun } = await ensureRootStructure(handle);
+      if (isFirstRun) {
+        await seedExampleQuiz(handle);
+      }
       await setStoredRootHandle(handle);
       onFolderReady(handle);
     } catch (err) {

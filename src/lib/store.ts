@@ -44,6 +44,22 @@ export async function listQuizzes(root: FileSystemDirectoryHandle): Promise<
   return results;
 }
 
+/**
+ * Folder names inside quizzes/ that don't have a valid quiz.json — e.g. left over from a
+ * previous crash, or dropped in by hand. Not shown as real quizzes, but still worth surfacing
+ * so the user can clean them up instead of having to go dig through the file system.
+ */
+export async function listOrphanedQuizDirs(root: FileSystemDirectoryHandle): Promise<string[]> {
+  const quizzesDir = await getQuizzesDir(root);
+  const dirs = await listSubdirs(quizzesDir);
+  const orphaned: string[] = [];
+  for (const dir of dirs) {
+    const meta = await readJson<QuizMeta>(dir.handle, "quiz.json");
+    if (!meta) orphaned.push(dir.name);
+  }
+  return orphaned;
+}
+
 export async function getQuizDir(
   root: FileSystemDirectoryHandle,
   slug: string,
@@ -129,6 +145,85 @@ export async function saveProofFile(
 export async function deleteProofFile(quizDir: FileSystemDirectoryHandle, filename: string): Promise<void> {
   const proofDir = await getProofDir(quizDir);
   await deleteEntry(proofDir, filename);
+}
+
+/** Seeds a starter quiz with mock questions and mock teams so a first-time user has something to explore. */
+export async function seedExampleQuiz(root: FileSystemDirectoryHandle): Promise<void> {
+  const quizzesDir = await getQuizzesDir(root);
+  const slug = await uniqueSlug(quizzesDir, "Example Quiz");
+  const quizDir = await getOrCreateSubdir(quizzesDir, slug);
+  await getProofDir(quizDir);
+
+  const meta: QuizMeta = {
+    id: newId(),
+    name: "Example Quiz",
+    createdAt: new Date().toISOString(),
+    activeJokerIds: [],
+    jokerUsesPerTeam: {},
+  };
+  await writeJson(quizDir, "quiz.json", meta);
+
+  const questions: Question[] = [
+    {
+      id: newId(),
+      text: "Which planet is known as the Red Planet?",
+      type: "choice",
+      options: ["Venus", "Mars", "Jupiter", "Saturn"],
+      correctIndex: 1,
+      category: "Science",
+      order: 1,
+      points: 1,
+    },
+    {
+      id: newId(),
+      text: "In what year did humans first land on the Moon?",
+      type: "open",
+      correctAnswerText: "1969",
+      category: "History",
+      order: 2,
+      points: 2,
+    },
+    {
+      id: newId(),
+      text: "Which of these is NOT one of the Great Lakes?",
+      type: "choice",
+      options: ["Superior", "Erie", "Champlain", "Huron"],
+      correctIndex: 2,
+      category: "Geography",
+      order: 3,
+      points: 2,
+    },
+    {
+      id: newId(),
+      text: 'Who wrote the novel "Pride and Prejudice"?',
+      type: "open",
+      correctAnswerText: "Jane Austen",
+      category: "Literature",
+      order: 4,
+      points: 3,
+    },
+  ];
+  await writeJson(quizDir, "questions.json", questions);
+
+  const teams: Team[] = [
+    {
+      id: newId(),
+      name: "The Quizzards",
+      members: ["Alex", "Sam"],
+      score: 0,
+      jokersRemaining: {},
+      jokerLog: [],
+    },
+    {
+      id: newId(),
+      name: "Trivia Newton John",
+      members: ["Jordan", "Casey"],
+      score: 0,
+      jokersRemaining: {},
+      jokerLog: [],
+    },
+  ];
+  await writeJson(quizDir, "teams.json", teams);
 }
 
 export async function getProofFileUrl(

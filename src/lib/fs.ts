@@ -33,12 +33,14 @@ export async function getOrCreateSubdir(
   return parent.getDirectoryHandle(name, { create: true });
 }
 
-export async function ensureRootStructure(root: FileSystemDirectoryHandle): Promise<void> {
+export async function ensureRootStructure(root: FileSystemDirectoryHandle): Promise<{ isFirstRun: boolean }> {
   await getOrCreateSubdir(root, "quizzes");
   const existingJokers = await readJson<unknown[]>(root, "jokers.json");
-  if (existingJokers === undefined) {
+  const isFirstRun = existingJokers === undefined;
+  if (isFirstRun) {
     await writeJson(root, "jokers.json", []);
   }
+  return { isFirstRun };
 }
 
 export async function readJson<T>(

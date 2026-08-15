@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppContext } from "@/context/AppContext";
-import { getQuizDir, loadQuizMeta, newId, saveQuizMeta, saveTeams } from "@/lib/store";
+import { getQuizDir, loadQuizMeta, loadTeams, newId, saveQuizMeta, saveTeams } from "@/lib/store";
 import type { QuizMeta, Team } from "@/types";
 
 interface TeamSetupProps {
@@ -34,14 +34,15 @@ function draftKey(slug: string): string {
   return `teamSetupDraft:${slug}`;
 }
 
-function defaultDraft(): Draft {
-  return {
-    teams: [
-      { key: newId(), name: "Team 1", members: [], memberDraft: "" },
-      { key: newId(), name: "Team 2", members: [], memberDraft: "" },
-    ],
-    jokerSettings: {},
-  };
+function defaultDraft(existingTeams: Team[] = []): Draft {
+  const teams: DraftTeam[] =
+    existingTeams.length > 0
+      ? existingTeams.map((t) => ({ key: newId(), name: t.name, members: [...t.members], memberDraft: "" }))
+      : [
+          { key: newId(), name: "Team 1", members: [], memberDraft: "" },
+          { key: newId(), name: "Team 2", members: [], memberDraft: "" },
+        ];
+  return { teams, jokerSettings: {} };
 }
 
 export function TeamSetup({ slug }: TeamSetupProps) {
@@ -58,6 +59,7 @@ export function TeamSetup({ slug }: TeamSetupProps) {
       setLoading(true);
       const dir = await getQuizDir(root, slug);
       const loadedMeta = await loadQuizMeta(dir);
+      const existingTeams = await loadTeams(dir);
       if (cancelled) return;
       setQuizDir(dir);
       setMeta(loadedMeta);
@@ -66,7 +68,7 @@ export function TeamSetup({ slug }: TeamSetupProps) {
       if (stored) {
         setDraft(JSON.parse(stored) as Draft);
       } else {
-        const base = defaultDraft();
+        const base = defaultDraft(existingTeams);
         if (loadedMeta) {
           const jokerSettings: Record<string, JokerSetting> = {};
           for (const jokerId of loadedMeta.activeJokerIds) {
