@@ -165,7 +165,14 @@ export function RevealSlide({
         })}
       </div>
 
-      <Button size="lg" className="mt-10" onClick={onAdvance}>
+      <Button
+        size="lg"
+        className="mt-10"
+        onClick={(e) => {
+          e.stopPropagation();
+          onAdvance();
+        }}
+      >
         {isLast ? "See Results" : "Next Question"}
       </Button>
     </SlideFrame>

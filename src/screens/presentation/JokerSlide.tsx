@@ -115,7 +115,14 @@ export function JokerSlide({ question, teams, activeJokers, onInvoke, onUndo, on
         })}
       </div>
 
-      <Button size="lg" className="mt-10" onClick={onAdvance}>
+      <Button
+        size="lg"
+        className="mt-10"
+        onClick={(e) => {
+          e.stopPropagation();
+          onAdvance();
+        }}
+      >
         Continue
       </Button>
     </SlideFrame>
