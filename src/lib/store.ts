@@ -1,3 +1,4 @@
+import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import {
   deleteEntry,
   fileToProofType,
@@ -5,6 +6,7 @@ import {
   listSubdirs,
   proofExtension,
   readJson,
+  slugify,
   uniqueSlug,
   writeBinaryFile,
   writeJson,
@@ -117,6 +119,141 @@ export async function saveQuestions(quizDir: FileSystemDirectoryHandle, question
 export async function deleteQuiz(root: FileSystemDirectoryHandle, slug: string): Promise<void> {
   const quizzesDir = await getQuizzesDir(root);
   await deleteEntry(quizzesDir, slug, true);
+}
+
+/** Copies a quiz's questions and proof files into a new quiz folder. Teams are not copied. */
+export async function duplicateQuiz(
+  root: FileSystemDirectoryHandle,
+  sourceSlug: string,
+): Promise<{ slug: string; meta: QuizMeta }> {
+  const sourceDir = await getQuizDir(root, sourceSlug);
+  const sourceMeta = await loadQuizMeta(sourceDir);
+  if (!sourceMeta) throw new Error("Could not read the quiz to duplicate.");
+  const sourceQuestions = await loadQuestions(sourceDir);
+  const sourceProofDir = await getProofDir(sourceDir);
+
+  const quizzesDir = await getQuizzesDir(root);
+  const newName = `${sourceMeta.name} (Copy)`;
+  const slug = await uniqueSlug(quizzesDir, newName);
+  const newDir = await getOrCreateSubdir(quizzesDir, slug);
+  const newProofDir = await getProofDir(newDir);
+
+  const meta: QuizMeta = { ...sourceMeta, id: newId(), name: newName, createdAt: new Date().toISOString() };
+  await writeJson(newDir, "quiz.json", meta);
+
+  const newQuestions: Question[] = [];
+  for (const q of sourceQuestions) {
+    const newQuestion: Question = { ...q, id: newId() };
+    if (q.proofFile) {
+      try {
+        const fileHandle = await sourceProofDir.getFileHandle(q.proofFile);
+        const file = await fileHandle.getFile();
+        await writeBinaryFile(newProofDir, q.proofFile, file);
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "NotFoundError")) throw error;
+        newQuestion.proofFile = undefined;
+        newQuestion.proofType = undefined;
+      }
+    }
+    newQuestions.push(newQuestion);
+  }
+  await writeJson(newDir, "questions.json", newQuestions);
+
+  return { slug, meta };
+}
+
+const EXPORT_MIME = "application/zip";
+
+/** Packages a quiz's questions and proof files as a downloadable .zip. Teams are not included. */
+export async function exportQuiz(root: FileSystemDirectoryHandle, slug: string): Promise<void> {
+  const quizDir = await getQuizDir(root, slug);
+  const meta = await loadQuizMeta(quizDir);
+  if (!meta) throw new Error("Could not read this quiz.");
+  const questions = await loadQuestions(quizDir);
+  const proofDir = await getProofDir(quizDir);
+
+  const files: Record<string, Uint8Array> = {
+    "quiz.json": strToU8(JSON.stringify(meta, null, 2)),
+    "questions.json": strToU8(JSON.stringify(questions, null, 2)),
+  };
+
+  for (const q of questions) {
+    if (!q.proofFile) continue;
+    try {
+      const fileHandle = await proofDir.getFileHandle(q.proofFile);
+      const file = await fileHandle.getFile();
+      files[`proof/${q.proofFile}`] = new Uint8Array(await file.arrayBuffer());
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "NotFoundError")) throw error;
+    }
+  }
+
+  const blob = new Blob([new Uint8Array(zipSync(files))], { type: EXPORT_MIME });
+  const suggestedName = `${slugify(meta.name)}.zip`;
+
+  if ("showSaveFilePicker" in window) {
+    const handle = await window.showSaveFilePicker({
+      suggestedName,
+      types: [{ description: "Quiz Night export", accept: { [EXPORT_MIME]: [".zip"] } }],
+    });
+    const writable = await handle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+  } else {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = suggestedName;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+}
+
+/** Imports a quiz previously created by exportQuiz into a new quiz folder. */
+export async function importQuizFromZip(
+  root: FileSystemDirectoryHandle,
+  zipFile: File,
+): Promise<{ slug: string; meta: QuizMeta }> {
+  const buffer = new Uint8Array(await zipFile.arrayBuffer());
+  let entries: Record<string, Uint8Array>;
+  try {
+    entries = unzipSync(buffer);
+  } catch {
+    throw new Error("That file isn't a valid .zip archive.");
+  }
+
+  const metaRaw = entries["quiz.json"];
+  const questionsRaw = entries["questions.json"];
+  if (!metaRaw || !questionsRaw) {
+    throw new Error("This doesn't look like a Quiz Night export (missing quiz.json or questions.json).");
+  }
+
+  let importedMeta: QuizMeta;
+  let importedQuestions: Question[];
+  try {
+    importedMeta = JSON.parse(strFromU8(metaRaw)) as QuizMeta;
+    importedQuestions = JSON.parse(strFromU8(questionsRaw)) as Question[];
+  } catch {
+    throw new Error("This export appears to be corrupted (invalid JSON).");
+  }
+
+  const quizzesDir = await getQuizzesDir(root);
+  const slug = await uniqueSlug(quizzesDir, importedMeta.name || "Imported Quiz");
+  const quizDir = await getOrCreateSubdir(quizzesDir, slug);
+  const proofDir = await getProofDir(quizDir);
+
+  const meta: QuizMeta = { ...importedMeta, id: newId(), createdAt: new Date().toISOString() };
+  await writeJson(quizDir, "quiz.json", meta);
+  await writeJson(quizDir, "questions.json", importedQuestions);
+
+  for (const [path, data] of Object.entries(entries)) {
+    if (!path.startsWith("proof/") || path.endsWith("/")) continue;
+    const filename = path.slice("proof/".length);
+    if (!filename) continue;
+    await writeBinaryFile(proofDir, filename, new Blob([new Uint8Array(data)]));
+  }
+
+  return { slug, meta };
 }
 
 export async function loadTeams(quizDir: FileSystemDirectoryHandle): Promise<Team[]> {

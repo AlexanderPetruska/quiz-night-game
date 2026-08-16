@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { MoreVertical } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,10 +13,26 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppContext } from "@/context/AppContext";
-import { createQuiz, deleteQuiz, listOrphanedQuizDirs, listQuizzes, seedExampleQuiz } from "@/lib/store";
+import {
+  createQuiz,
+  deleteQuiz,
+  duplicateQuiz,
+  exportQuiz,
+  importQuizFromZip,
+  listOrphanedQuizDirs,
+  listQuizzes,
+  seedExampleQuiz,
+} from "@/lib/store";
 import type { QuizSummary } from "@/types";
 
 interface QuizRow {
@@ -36,6 +53,8 @@ export function MyQuizzes() {
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | undefined>();
   const [deleting, setDeleting] = useState(false);
   const [seedingExample, setSeedingExample] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [busySlug, setBusySlug] = useState<string | undefined>();
 
   async function refresh() {
     setLoading(true);
@@ -91,6 +110,53 @@ export function MyQuizzes() {
     }
   }
 
+  async function handleDuplicate(slug: string) {
+    setBusySlug(slug);
+    try {
+      const { meta } = await duplicateQuiz(root, slug);
+      await refresh();
+      toast.success(`Duplicated as "${meta.name}".`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not duplicate quiz.");
+    } finally {
+      setBusySlug(undefined);
+    }
+  }
+
+  async function handleExport(slug: string) {
+    setBusySlug(slug);
+    try {
+      await exportQuiz(root, slug);
+      toast.success("Quiz exported.");
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      toast.error(err instanceof Error ? err.message : "Could not export quiz.");
+    } finally {
+      setBusySlug(undefined);
+    }
+  }
+
+  async function handleImport() {
+    setImporting(true);
+    try {
+      const [fileHandle] = await window.showOpenFilePicker({
+        types: [{ description: "Quiz Night export", accept: { "application/zip": [".zip"] } }],
+        excludeAcceptAllOption: false,
+        multiple: false,
+      });
+      const file = await fileHandle.getFile();
+      const { slug, meta } = await importQuizFromZip(root, file);
+      await refresh();
+      toast.success(`Imported "${meta.name}".`);
+      navigate({ name: "quizEditor", slug });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      toast.error(err instanceof Error ? err.message : "Could not import quiz.");
+    } finally {
+      setImporting(false);
+    }
+  }
+
   async function handleDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -123,6 +189,9 @@ export function MyQuizzes() {
               {seedingExample ? "Adding…" : "+ Add Example Quiz"}
             </Button>
           )}
+          <Button variant="outline" onClick={handleImport} disabled={importing}>
+            {importing ? "Importing…" : "Import Quiz"}
+          </Button>
           <Dialog open={newQuizOpen} onOpenChange={setNewQuizOpen}>
             <DialogTrigger render={<Button size="lg" />}>+ New Quiz</DialogTrigger>
             <DialogContent>
@@ -175,7 +244,7 @@ export function MyQuizzes() {
                 {quiz.summary.questionCount} question{quiz.summary.questionCount === 1 ? "" : "s"}
               </p>
             </CardContent>
-            <CardFooter className="flex flex-wrap gap-2">
+            <CardFooter className="flex flex-wrap items-center gap-2">
               <Button variant="secondary" onClick={() => navigate({ name: "quizEditor", slug: quiz.slug })}>
                 Open / Edit
               </Button>
@@ -185,12 +254,26 @@ export function MyQuizzes() {
               >
                 Start Presentation
               </Button>
-              <Button
-                variant="destructive"
-                onClick={() => setDeleteTarget({ kind: "quiz", slug: quiz.slug, name: quiz.summary.meta.name })}
-              >
-                Delete
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={<Button variant="ghost" size="icon" disabled={busySlug === quiz.slug} />}
+                >
+                  <MoreVertical />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handleDuplicate(quiz.slug)}>Duplicate</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport(quiz.slug)}>Export…</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() =>
+                      setDeleteTarget({ kind: "quiz", slug: quiz.slug, name: quiz.summary.meta.name })
+                    }
+                  >
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </CardFooter>
           </Card>
         ))}

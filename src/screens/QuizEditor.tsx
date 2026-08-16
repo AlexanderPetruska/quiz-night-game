@@ -19,6 +19,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppContext } from "@/context/AppContext";
 import { deleteProofFile, getQuizDir, loadQuestions, loadQuizMeta, newId, saveProofFile, saveQuestions } from "@/lib/store";
+import { QuestionPreview } from "@/screens/QuestionPreview";
 import type { Question, QuestionType } from "@/types";
 
 interface QuizEditorProps {
@@ -80,6 +81,7 @@ export function QuizEditor({ slug }: QuizEditorProps) {
   const [form, setForm] = useState<QuestionFormState>(emptyForm());
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Question | undefined>();
+  const [previewQuestion, setPreviewQuestion] = useState<Question | undefined>();
 
   useEffect(() => {
     let cancelled = false;
@@ -264,6 +266,9 @@ export function QuizEditor({ slug }: QuizEditorProps) {
                     ↓
                   </Button>
                 </div>
+                <Button size="sm" variant="outline" onClick={() => setPreviewQuestion(q)}>
+                  Preview
+                </Button>
                 <Button size="sm" variant="secondary" onClick={() => openEdit(q)}>
                   Edit
                 </Button>
@@ -426,6 +431,10 @@ export function QuizEditor({ slug }: QuizEditorProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {previewQuestion && quizDir && (
+        <QuestionPreview question={previewQuestion} quizDir={quizDir} onClose={() => setPreviewQuestion(undefined)} />
+      )}
     </div>
   );
 }
