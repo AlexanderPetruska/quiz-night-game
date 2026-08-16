@@ -40,9 +40,11 @@ export function RevealSlide({
   const allScored = teams.every((t) => scoredTeamIds.has(t.id));
   const remaining = teams.length - scoredTeamIds.size;
 
+  const hasRevealContent = question.type === "choice" || !!question.correctAnswerText;
+
   return (
     <SlideFrame slideKey={`reveal-${question.id}`} onAdvance={onAdvance}>
-      <h2 className="mb-6 text-2xl font-medium text-muted-foreground">Correct Answer</h2>
+      {hasRevealContent && <h2 className="mb-6 text-2xl font-medium text-muted-foreground">Correct Answer</h2>}
 
       {question.type === "choice" && question.options && (
         <div className="mb-10 grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
@@ -64,9 +66,9 @@ export function RevealSlide({
         </div>
       )}
 
-      {question.type === "open" && (
+      {question.type === "open" && question.correctAnswerText && (
         <p className="mb-10 max-w-3xl text-center text-4xl font-bold text-green-400">
-          {question.correctAnswerText || "(no answer text provided)"}
+          {question.correctAnswerText}
         </p>
       )}
 
