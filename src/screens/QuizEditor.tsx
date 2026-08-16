@@ -117,6 +117,9 @@ export function QuizEditor({ slug }: QuizEditorProps) {
       if (form.options.some((opt) => !opt.trim())) return false;
       if (form.correctIndex === undefined) return false;
     }
+    if (form.type === "open") {
+      if (!form.correctAnswerText.trim()) return false;
+    }
     return true;
   }
 
@@ -329,7 +332,7 @@ export function QuizEditor({ slug }: QuizEditorProps) {
             </div>
           ) : (
             <div className="space-y-2">
-              <Label htmlFor="q-answer">Correct answer (shown on reveal slide, optional)</Label>
+              <Label htmlFor="q-answer">Correct answer (shown on reveal slide)</Label>
               <Input
                 id="q-answer"
                 value={form.correctAnswerText}
