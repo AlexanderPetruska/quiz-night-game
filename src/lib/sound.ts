@@ -190,6 +190,13 @@ interface MusicState {
 let music: MusicState | undefined;
 
 /**
+ * Bumped by every startMusic()/stopMusic() call. startMusic() captures the value at call time and
+ * checks it again once the (possibly async) context-resume wait completes, so a stop that happens
+ * during that wait correctly cancels the pending start instead of it beginning anyway.
+ */
+let musicGeneration = 0;
+
+/**
  * The master gain node, created once and reused for the whole page lifetime rather than
  * recreated on every startMusic(). If it were recreated per-start, calling startMusic() again
  * before a previous stopMusic()'s fade-out finished would leave two gain chains briefly
@@ -265,38 +272,55 @@ function applyMusicGain(ducked: boolean): void {
  * could momentarily leak sound. Resuming after stopMusic() picks the beat up from where it would
  * be had it never stopped (see musicEpoch) instead of restarting it, and ducked reflects whatever
  * the presentation's current slide calls for instead of always assuming full volume.
+ *
+ * On a brand-new AudioContext (e.g. right after a hard refresh, before it's ever been resumed),
+ * scheduling automation before resume() has actually completed can let the very first rendered
+ * audio use the GainNode's default value — 1.0, unity gain — instead of the 0 we asked for, for
+ * a moment, which is audible as a much-louder-than-normal first beat. Waiting for a confirmed
+ * "running" state before touching any AudioParam avoids that race.
  */
 export function startMusic(ducked = false): void {
   if (music) return;
   const audioCtx = getContext();
   if (!audioCtx) return;
+  const generation = ++musicGeneration;
 
-  try {
-    if (musicEpoch === undefined) musicEpoch = audioCtx.currentTime;
-    const elapsedSteps = (audioCtx.currentTime - musicEpoch) / SIXTEENTH_SECONDS;
-    const step = Math.max(0, Math.ceil(elapsedSteps));
-    const nextStepTime = musicEpoch + step * SIXTEENTH_SECONDS;
+  const begin = () => {
+    if (generation !== musicGeneration) return; // superseded by a stop (or another start) meanwhile
+    try {
+      if (musicEpoch === undefined) musicEpoch = audioCtx.currentTime;
+      const elapsedSteps = (audioCtx.currentTime - musicEpoch) / SIXTEENTH_SECONDS;
+      const step = Math.max(0, Math.ceil(elapsedSteps));
+      const nextStepTime = musicEpoch + step * SIXTEENTH_SECONDS;
 
-    const gain = getMusicGain(audioCtx);
-    const state: MusicState = { schedulerId: 0, nextStepTime, step, ducked };
-    state.schedulerId = window.setInterval(() => {
-      const ctxNow = getContext();
-      if (!ctxNow) return;
-      while (state.nextStepTime < ctxNow.currentTime + SCHEDULE_AHEAD_SECONDS) {
-        scheduleMusicStep(ctxNow, gain, state.step, state.nextStepTime);
-        state.nextStepTime += SIXTEENTH_SECONDS;
-        state.step += 1;
-      }
-    }, SCHEDULER_INTERVAL_MS);
-    music = state;
-    applyMusicGain(ducked);
-  } catch {
-    // Background music is a nice-to-have — never let a scheduling error affect the presentation.
+      const gain = getMusicGain(audioCtx);
+      const state: MusicState = { schedulerId: 0, nextStepTime, step, ducked };
+      state.schedulerId = window.setInterval(() => {
+        const ctxNow = getContext();
+        if (!ctxNow) return;
+        while (state.nextStepTime < ctxNow.currentTime + SCHEDULE_AHEAD_SECONDS) {
+          scheduleMusicStep(ctxNow, gain, state.step, state.nextStepTime);
+          state.nextStepTime += SIXTEENTH_SECONDS;
+          state.step += 1;
+        }
+      }, SCHEDULER_INTERVAL_MS);
+      music = state;
+      applyMusicGain(ducked);
+    } catch {
+      // Background music is a nice-to-have — never let a scheduling error affect the presentation.
+    }
+  };
+
+  if (audioCtx.state === "running") {
+    begin();
+  } else {
+    audioCtx.resume().then(begin, () => {});
   }
 }
 
 /** Stops the background music loop — used both for muting and for leaving the presentation. */
 export function stopMusic(): void {
+  musicGeneration++; // cancel any startMusic() still waiting on context resume
   if (!music) return;
   window.clearInterval(music.schedulerId);
   music = undefined;
