@@ -215,9 +215,8 @@ export function TeamSetup({ slug }: TeamSetupProps) {
                   className="max-w-xs font-medium"
                 />
                 <Button
-                  variant="ghost"
+                  variant="destructive"
                   size="sm"
-                  className="text-destructive"
                   onClick={() => removeTeam(team.key)}
                   disabled={draft.teams.length <= 1}
                 >

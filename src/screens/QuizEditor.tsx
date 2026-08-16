@@ -264,7 +264,7 @@ export function QuizEditor({ slug }: QuizEditorProps) {
                 <Button size="sm" variant="secondary" onClick={() => openEdit(q)}>
                   Edit
                 </Button>
-                <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteTarget(q)}>
+                <Button size="sm" variant="destructive" onClick={() => setDeleteTarget(q)}>
                   Delete
                 </Button>
               </div>
@@ -357,8 +357,7 @@ export function QuizEditor({ slug }: QuizEditorProps) {
                 <Button
                   type="button"
                   size="sm"
-                  variant="ghost"
-                  className="text-destructive"
+                  variant="destructive"
                   onClick={() => setForm({ ...form, removeProof: true })}
                 >
                   Remove

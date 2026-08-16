@@ -186,8 +186,7 @@ export function MyQuizzes() {
                 Start Presentation
               </Button>
               <Button
-                variant="ghost"
-                className="text-destructive"
+                variant="destructive"
                 onClick={() => setDeleteTarget({ kind: "quiz", slug: quiz.slug, name: quiz.summary.meta.name })}
               >
                 Delete
@@ -211,8 +210,7 @@ export function MyQuizzes() {
                   <span className="font-mono text-sm text-muted-foreground">{name}</span>
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="text-destructive"
+                    variant="destructive"
                     onClick={() => setDeleteTarget({ kind: "orphan", slug: name })}
                   >
                     Delete

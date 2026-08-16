@@ -188,12 +188,7 @@ export function JokerLibrary() {
                 <Button size="sm" variant="secondary" onClick={() => openEdit(joker)}>
                   Edit
                 </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-destructive"
-                  onClick={() => setDeleteTarget(joker)}
-                >
+                <Button size="sm" variant="destructive" onClick={() => setDeleteTarget(joker)}>
                   Delete
                 </Button>
               </div>

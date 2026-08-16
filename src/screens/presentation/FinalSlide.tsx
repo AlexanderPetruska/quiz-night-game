@@ -12,7 +12,7 @@ export function FinalSlide({ teams, onEnd }: FinalSlideProps) {
   const topScore = sorted[0]?.score;
 
   return (
-    <SlideFrame slideKey="final" onAdvance={() => {}}>
+    <SlideFrame slideKey="final" onAdvance={() => {}} clickable={false}>
       <h1 className="mb-10 text-5xl font-bold">Final Results</h1>
       <div className="w-full max-w-2xl space-y-3">
         {sorted.map((team, i) => {
