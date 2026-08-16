@@ -25,6 +25,10 @@ export interface QuizMeta {
   createdAt: string;
   activeJokerIds: string[];
   jokerUsesPerTeam: Record<string, number>;
+  /** jokerId -> last question order it may still be used on; unset means no round limit. */
+  jokerLastRound?: Record<string, number>;
+  /** jokerId -> minimum score the inviting team must have to use it; unset means no minimum. */
+  jokerMinScore?: Record<string, number>;
   defaultTimerSeconds?: number;
 }
 

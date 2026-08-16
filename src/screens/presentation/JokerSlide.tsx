@@ -11,6 +11,8 @@ interface JokerSlideProps {
   question: Question;
   teams: Team[];
   activeJokers: Joker[];
+  jokerLastRound: Record<string, number>;
+  jokerMinScore: Record<string, number>;
   onInvoke: (teamId: string, jokerId: string, targetTeamId?: string) => void;
   onUndo: (teamId: string) => void;
   onAdvance: () => void;
@@ -21,9 +23,27 @@ interface PendingTarget {
   joker: Joker;
 }
 
-export function JokerSlide({ question, teams, activeJokers, onInvoke, onUndo, onAdvance }: JokerSlideProps) {
+export function JokerSlide({
+  question,
+  teams,
+  activeJokers,
+  jokerLastRound,
+  jokerMinScore,
+  onInvoke,
+  onUndo,
+  onAdvance,
+}: JokerSlideProps) {
   const { t } = useTranslation();
   const [pending, setPending] = useState<PendingTarget | undefined>();
+
+  function isAvailable(joker: Joker, team: Team): boolean {
+    if ((team.jokersRemaining[joker.id] ?? 0) <= 0) return false;
+    const lastRound = jokerLastRound[joker.id];
+    if (lastRound !== undefined && question.order > lastRound) return false;
+    const minScore = jokerMinScore[joker.id];
+    if (minScore !== undefined && team.score < minScore) return false;
+    return true;
+  }
 
   function handleJokerClick(teamId: string, joker: Joker) {
     if (EFFECT_TYPES_NEEDING_TARGET.includes(joker.effectType)) {
@@ -98,8 +118,8 @@ export function JokerSlide({ question, teams, activeJokers, onInvoke, onUndo, on
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {activeJokers.map((joker) => {
+                      if (!isAvailable(joker, team)) return null;
                       const remaining = team.jokersRemaining[joker.id] ?? 0;
-                      if (remaining <= 0) return null;
                       return (
                         <Button key={joker.id} variant="outline" onClick={() => handleJokerClick(team.id, joker)}>
                           {joker.icon} {joker.name}{" "}
@@ -109,7 +129,7 @@ export function JokerSlide({ question, teams, activeJokers, onInvoke, onUndo, on
                         </Button>
                       );
                     })}
-                    {activeJokers.every((j) => (team.jokersRemaining[j.id] ?? 0) <= 0) && (
+                    {activeJokers.every((j) => !isAvailable(j, team)) && (
                       <p className="text-muted-foreground">{t("presentation.joker.noJokersRemaining")}</p>
                     )}
                   </div>

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppContext } from "@/context/AppContext";
 import { useTranslation } from "@/i18n/I18nContext";
-import { getQuizDir, loadQuizMeta, loadTeams, newId, saveQuizMeta, saveTeams } from "@/lib/store";
+import { getQuizDir, loadQuestions, loadQuizMeta, loadTeams, newId, saveQuizMeta, saveTeams } from "@/lib/store";
 import type { QuizMeta, Team } from "@/types";
 
 interface TeamSetupProps {
@@ -25,6 +25,10 @@ interface DraftTeam {
 interface JokerSetting {
   active: boolean;
   uses: string;
+  /** Last question number this joker may be used on; empty string = no limit. */
+  lastRound: string;
+  /** Minimum score the inviting team must have; empty string = no minimum. */
+  minScore: string;
 }
 
 interface Draft {
@@ -53,6 +57,7 @@ export function TeamSetup({ slug }: TeamSetupProps) {
   const defaultTeamName = (n: number) => t("teamSetup.defaultTeamName", { n });
   const [quizDir, setQuizDir] = useState<FileSystemDirectoryHandle | undefined>();
   const [meta, setMeta] = useState<QuizMeta | undefined>();
+  const [questionCount, setQuestionCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft>(() => defaultDraft([], defaultTeamName));
   const [starting, setStarting] = useState(false);
@@ -64,9 +69,11 @@ export function TeamSetup({ slug }: TeamSetupProps) {
       const dir = await getQuizDir(root, slug);
       const loadedMeta = await loadQuizMeta(dir);
       const existingTeams = await loadTeams(dir);
+      const loadedQuestions = await loadQuestions(dir);
       if (cancelled) return;
       setQuizDir(dir);
       setMeta(loadedMeta);
+      setQuestionCount(loadedQuestions.length);
 
       const stored = sessionStorage.getItem(draftKey(slug));
       if (stored) {
@@ -79,6 +86,8 @@ export function TeamSetup({ slug }: TeamSetupProps) {
             jokerSettings[jokerId] = {
               active: true,
               uses: String(loadedMeta.jokerUsesPerTeam[jokerId] ?? 1),
+              lastRound: loadedMeta.jokerLastRound?.[jokerId] !== undefined ? String(loadedMeta.jokerLastRound[jokerId]) : "",
+              minScore: loadedMeta.jokerMinScore?.[jokerId] !== undefined ? String(loadedMeta.jokerMinScore[jokerId]) : "",
             };
           }
           base.jokerSettings = jokerSettings;
@@ -139,23 +148,35 @@ export function TeamSetup({ slug }: TeamSetupProps) {
     }));
   }
 
+  function defaultJokerSetting(d: Draft, jokerId: string): JokerSetting {
+    return d.jokerSettings[jokerId] ?? { active: false, uses: "1", lastRound: "", minScore: "" };
+  }
+
   function setJokerActive(jokerId: string, active: boolean) {
     setDraft((d) => ({
       ...d,
-      jokerSettings: {
-        ...d.jokerSettings,
-        [jokerId]: { active, uses: d.jokerSettings[jokerId]?.uses ?? "1" },
-      },
+      jokerSettings: { ...d.jokerSettings, [jokerId]: { ...defaultJokerSetting(d, jokerId), active } },
     }));
   }
 
   function setJokerUses(jokerId: string, uses: string) {
     setDraft((d) => ({
       ...d,
-      jokerSettings: {
-        ...d.jokerSettings,
-        [jokerId]: { active: d.jokerSettings[jokerId]?.active ?? false, uses },
-      },
+      jokerSettings: { ...d.jokerSettings, [jokerId]: { ...defaultJokerSetting(d, jokerId), uses } },
+    }));
+  }
+
+  function setJokerLastRound(jokerId: string, lastRound: string) {
+    setDraft((d) => ({
+      ...d,
+      jokerSettings: { ...d.jokerSettings, [jokerId]: { ...defaultJokerSetting(d, jokerId), lastRound } },
+    }));
+  }
+
+  function setJokerMinScore(jokerId: string, minScore: string) {
+    setDraft((d) => ({
+      ...d,
+      jokerSettings: { ...d.jokerSettings, [jokerId]: { ...defaultJokerSetting(d, jokerId), minScore } },
     }));
   }
 
@@ -169,11 +190,20 @@ export function TeamSetup({ slug }: TeamSetupProps) {
         .filter((j) => draft.jokerSettings[j.id]?.active)
         .map((j) => j.id);
       const jokerUsesPerTeam: Record<string, number> = {};
+      const jokerLastRound: Record<string, number> = {};
+      const jokerMinScore: Record<string, number> = {};
       for (const jokerId of activeJokerIds) {
-        jokerUsesPerTeam[jokerId] = Number(draft.jokerSettings[jokerId]?.uses) || 1;
+        const setting = draft.jokerSettings[jokerId];
+        jokerUsesPerTeam[jokerId] = Number(setting?.uses) || 1;
+        if (setting?.lastRound.trim()) {
+          jokerLastRound[jokerId] = Number(setting.lastRound);
+        }
+        if (setting?.minScore.trim()) {
+          jokerMinScore[jokerId] = Number(setting.minScore);
+        }
       }
 
-      const updatedMeta: QuizMeta = { ...meta, activeJokerIds, jokerUsesPerTeam };
+      const updatedMeta: QuizMeta = { ...meta, activeJokerIds, jokerUsesPerTeam, jokerLastRound, jokerMinScore };
       await saveQuizMeta(quizDir, updatedMeta);
 
       const teams: Team[] = draft.teams.map((t) => ({
@@ -285,29 +315,65 @@ export function TeamSetup({ slug }: TeamSetupProps) {
             <CardContent className="divide-y py-0">
               {jokers.map((joker) => {
                 const setting = draft.jokerSettings[joker.id];
+                const active = !!setting?.active;
                 return (
-                  <div key={joker.id} className="flex items-center gap-4 py-3">
-                    <Checkbox
-                      id={`joker-${joker.id}`}
-                      checked={!!setting?.active}
-                      onCheckedChange={(checked) => setJokerActive(joker.id, checked === true)}
-                    />
-                    <Label htmlFor={`joker-${joker.id}`} className="flex-1 cursor-pointer">
-                      <span className="mr-2">{joker.icon}</span>
-                      {joker.name}
-                    </Label>
-                    <Label htmlFor={`uses-${joker.id}`} className="text-sm text-muted-foreground">
-                      {t("teamSetup.usesPerTeamLabel")}
-                    </Label>
-                    <Input
-                      id={`uses-${joker.id}`}
-                      type="number"
-                      min="0"
-                      className="w-20"
-                      value={setting?.uses ?? "1"}
-                      onChange={(e) => setJokerUses(joker.id, e.target.value)}
-                      disabled={!setting?.active}
-                    />
+                  <div key={joker.id} className="space-y-2 py-3">
+                    <div className="flex items-center gap-4">
+                      <Checkbox
+                        id={`joker-${joker.id}`}
+                        checked={active}
+                        onCheckedChange={(checked) => setJokerActive(joker.id, checked === true)}
+                      />
+                      <Label htmlFor={`joker-${joker.id}`} className="flex-1 cursor-pointer">
+                        <span className="mr-2">{joker.icon}</span>
+                        {joker.name}
+                      </Label>
+                    </div>
+                    {active && (
+                      <div className="ml-9 flex flex-wrap items-center gap-x-6 gap-y-2">
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={`uses-${joker.id}`} className="text-sm text-muted-foreground">
+                            {t("teamSetup.usesPerTeamLabel")}
+                          </Label>
+                          <Input
+                            id={`uses-${joker.id}`}
+                            type="number"
+                            min="0"
+                            className="w-20"
+                            value={setting?.uses ?? "1"}
+                            onChange={(e) => setJokerUses(joker.id, e.target.value)}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={`last-round-${joker.id}`} className="text-sm text-muted-foreground">
+                            {t("teamSetup.lastRoundLabel", { total: questionCount })}
+                          </Label>
+                          <Input
+                            id={`last-round-${joker.id}`}
+                            type="number"
+                            min="1"
+                            max={questionCount || undefined}
+                            className="w-20"
+                            placeholder={t("teamSetup.noLimitPlaceholder")}
+                            value={setting?.lastRound ?? ""}
+                            onChange={(e) => setJokerLastRound(joker.id, e.target.value)}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={`min-score-${joker.id}`} className="text-sm text-muted-foreground">
+                            {t("teamSetup.minScoreLabel")}
+                          </Label>
+                          <Input
+                            id={`min-score-${joker.id}`}
+                            type="number"
+                            className="w-20"
+                            placeholder={t("teamSetup.noMinimumPlaceholder")}
+                            value={setting?.minScore ?? ""}
+                            onChange={(e) => setJokerMinScore(joker.id, e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}

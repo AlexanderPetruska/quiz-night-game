@@ -170,6 +170,13 @@ export function Presentation({ slug }: PresentationProps) {
     if (!currentSlide || currentSlide.kind !== "joker") return;
     const question = questions[currentSlide.qIndex];
     const joker = jokers.find((j) => j.id === jokerId);
+    const invokingTeam = teams.find((t) => t.id === teamId);
+
+    const lastRound = meta?.jokerLastRound?.[jokerId];
+    if (lastRound !== undefined && question.order > lastRound) return;
+    const minScore = meta?.jokerMinScore?.[jokerId];
+    if (minScore !== undefined && (invokingTeam?.score ?? 0) < minScore) return;
+
     const isScoreSwap = joker?.effectType === "scoreSwap" && !!targetTeamId;
 
     setTeams((ts) => {
@@ -365,6 +372,8 @@ export function Presentation({ slug }: PresentationProps) {
             question={questions[currentSlide.qIndex]}
             teams={teams}
             activeJokers={activeJokers}
+            jokerLastRound={meta.jokerLastRound ?? {}}
+            jokerMinScore={meta.jokerMinScore ?? {}}
             onInvoke={handleInvokeJoker}
             onUndo={handleUndoJoker}
             onAdvance={advance}
