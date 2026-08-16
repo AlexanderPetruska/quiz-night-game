@@ -181,7 +181,6 @@ const MUSIC_PROGRESSION = [
 ];
 
 interface MusicState {
-  gain: GainNode;
   schedulerId: number;
   nextStepTime: number;
   step: number;
@@ -189,6 +188,15 @@ interface MusicState {
 }
 
 let music: MusicState | undefined;
+
+/**
+ * The master gain node, created once and reused for the whole page lifetime rather than
+ * recreated on every startMusic(). If it were recreated per-start, calling startMusic() again
+ * before a previous stopMusic()'s fade-out finished would leave two gain chains briefly
+ * overlapping — one fading out, one fading in — summing to audibly more than normal volume for
+ * a moment before settling. Reusing a single node makes that impossible.
+ */
+let musicGain: GainNode | undefined;
 
 /**
  * Fixed anchor for step 0, set the first time the loop ever starts and never touched again.
@@ -233,22 +241,32 @@ function scheduleMusicStep(audioCtx: AudioContext, destination: GainNode, step: 
   }
 }
 
-function applyMusicGain(state: MusicState): void {
+function getMusicGain(audioCtx: AudioContext): GainNode {
+  if (!musicGain) {
+    musicGain = audioCtx.createGain();
+    musicGain.gain.setValueAtTime(0, audioCtx.currentTime);
+    musicGain.connect(audioCtx.destination);
+  }
+  return musicGain;
+}
+
+function applyMusicGain(ducked: boolean): void {
   const audioCtx = getContext();
-  if (!audioCtx) return;
-  const target = state.ducked ? MUSIC_DUCKED_GAIN : MUSIC_NORMAL_GAIN;
-  state.gain.gain.cancelScheduledValues(audioCtx.currentTime);
-  state.gain.gain.setValueAtTime(state.gain.gain.value, audioCtx.currentTime);
-  state.gain.gain.linearRampToValueAtTime(target, audioCtx.currentTime + GAIN_RAMP_SECONDS);
+  if (!audioCtx || !musicGain) return;
+  const target = ducked ? MUSIC_DUCKED_GAIN : MUSIC_NORMAL_GAIN;
+  musicGain.gain.cancelScheduledValues(audioCtx.currentTime);
+  musicGain.gain.setValueAtTime(musicGain.gain.value, audioCtx.currentTime);
+  musicGain.gain.linearRampToValueAtTime(target, audioCtx.currentTime + GAIN_RAMP_SECONDS);
 }
 
 /**
- * Starts the background music loop, if not already running. Nothing is created or scheduled
- * while music is off — this should only be called while it's meant to be audible — so there's no
- * gain-node mute state that could momentarily leak sound. Resuming after stopMusic() picks the
- * beat up from where it would be had it never stopped (see musicEpoch) instead of restarting it.
+ * Starts the background music loop, if not already running. Nothing is scheduled while music is
+ * off — this should only be called while it's meant to be audible — so there's no mute state that
+ * could momentarily leak sound. Resuming after stopMusic() picks the beat up from where it would
+ * be had it never stopped (see musicEpoch) instead of restarting it, and ducked reflects whatever
+ * the presentation's current slide calls for instead of always assuming full volume.
  */
-export function startMusic(): void {
+export function startMusic(ducked = false): void {
   if (music) return;
   const audioCtx = getContext();
   if (!audioCtx) return;
@@ -259,22 +277,19 @@ export function startMusic(): void {
     const step = Math.max(0, Math.ceil(elapsedSteps));
     const nextStepTime = musicEpoch + step * SIXTEENTH_SECONDS;
 
-    const gain = audioCtx.createGain();
-    gain.gain.setValueAtTime(0, audioCtx.currentTime);
-    gain.connect(audioCtx.destination);
-
-    const state: MusicState = { gain, schedulerId: 0, nextStepTime, step, ducked: false };
+    const gain = getMusicGain(audioCtx);
+    const state: MusicState = { schedulerId: 0, nextStepTime, step, ducked };
     state.schedulerId = window.setInterval(() => {
       const ctxNow = getContext();
       if (!ctxNow) return;
       while (state.nextStepTime < ctxNow.currentTime + SCHEDULE_AHEAD_SECONDS) {
-        scheduleMusicStep(ctxNow, state.gain, state.step, state.nextStepTime);
+        scheduleMusicStep(ctxNow, gain, state.step, state.nextStepTime);
         state.nextStepTime += SIXTEENTH_SECONDS;
         state.step += 1;
       }
     }, SCHEDULER_INTERVAL_MS);
     music = state;
-    applyMusicGain(state);
+    applyMusicGain(ducked);
   } catch {
     // Background music is a nice-to-have — never let a scheduling error affect the presentation.
   }
@@ -283,28 +298,26 @@ export function startMusic(): void {
 /** Stops the background music loop — used both for muting and for leaving the presentation. */
 export function stopMusic(): void {
   if (!music) return;
-  const { gain, schedulerId } = music;
-  window.clearInterval(schedulerId);
+  window.clearInterval(music.schedulerId);
   music = undefined;
 
   const audioCtx = getContext();
-  if (!audioCtx) return;
-  gain.gain.cancelScheduledValues(audioCtx.currentTime);
-  gain.gain.setValueAtTime(gain.gain.value, audioCtx.currentTime);
-  gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
-  window.setTimeout(() => gain.disconnect(), 350);
+  if (!audioCtx || !musicGain) return;
+  musicGain.gain.cancelScheduledValues(audioCtx.currentTime);
+  musicGain.gain.setValueAtTime(musicGain.gain.value, audioCtx.currentTime);
+  musicGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
 }
 
 /** Lowers the music volume — used while a reveal/scoring slide has focus. */
 export function duckMusic(): void {
   if (!music) return;
   music.ducked = true;
-  applyMusicGain(music);
+  applyMusicGain(true);
 }
 
 /** Restores the music volume after duckMusic(). */
 export function unduckMusic(): void {
   if (!music) return;
   music.ducked = false;
-  applyMusicGain(music);
+  applyMusicGain(false);
 }

@@ -138,13 +138,6 @@ export function Presentation({ slug }: PresentationProps) {
     void saveTeams(quizDir, teams);
   }, [teams, loaded, quizDir]);
 
-  // Background music loop. Off entirely (nothing scheduled) unless the host has it enabled.
-  useEffect(() => {
-    if (!loaded || !musicOn) return;
-    startMusic();
-    return () => stopMusic();
-  }, [loaded, musicOn]);
-
   // Fullscreen on entry.
   useEffect(() => {
     document.documentElement
@@ -174,6 +167,16 @@ export function Presentation({ slug }: PresentationProps) {
   const slidePlan = loaded ? buildSlidePlan(questions, activeJokers.length > 0) : [];
   const currentSlide = slidePlan[currentIndex];
   const slideKind = currentSlide?.kind;
+
+  // Background music loop. Off entirely (nothing scheduled) unless the host has it enabled.
+  // Starts already-ducked if music happens to be turned on while sitting on the reveal slide, so
+  // it doesn't briefly play at full volume before the slide-driven effect below corrects it.
+  useEffect(() => {
+    if (!loaded || !musicOn) return;
+    startMusic(slideKind === "reveal");
+    return () => stopMusic();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, musicOn]);
 
   // Duck the music under the reveal slide so it doesn't compete with the host awarding points.
   useEffect(() => {
