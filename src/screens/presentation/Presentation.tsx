@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Volume2, VolumeX } from "lucide-react";
+import { Music4, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,13 +13,19 @@ import { useAppContext } from "@/context/AppContext";
 import { useTranslation } from "@/i18n/I18nContext";
 import { getIncomingSteals, hasSwappedWith } from "@/lib/jokers";
 import {
+  duckMusic,
+  isMusicEnabled,
   isSoundEnabled,
   playConfirm,
   playCorrect,
   playFreeze,
   playIncorrect,
   playJoker,
+  setMusicEnabled,
   setSoundEnabled,
+  startMusic,
+  stopMusic,
+  unduckMusic,
 } from "@/lib/sound";
 import { getQuizDir, loadQuestions, loadQuizMeta, loadTeams, saveTeams } from "@/lib/store";
 import { FinalSlide } from "@/screens/presentation/FinalSlide";
@@ -64,6 +70,7 @@ export function Presentation({ slug }: PresentationProps) {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [soundOn, setSoundOn] = useState(() => isSoundEnabled());
+  const [musicOn, setMusicOn] = useState(() => isMusicEnabled());
   const enteredFullscreenRef = useRef(false);
 
   useEffect(() => {
@@ -107,6 +114,13 @@ export function Presentation({ slug }: PresentationProps) {
     void saveTeams(quizDir, teams);
   }, [teams, loaded, quizDir]);
 
+  // Background music loop, on for the whole presentation.
+  useEffect(() => {
+    if (!loaded || !musicOn) return;
+    startMusic();
+    return () => stopMusic();
+  }, [loaded, musicOn]);
+
   // Fullscreen on entry.
   useEffect(() => {
     document.documentElement
@@ -135,6 +149,16 @@ export function Presentation({ slug }: PresentationProps) {
   const activeJokers = meta ? jokers.filter((j) => meta.activeJokerIds.includes(j.id)) : [];
   const slidePlan = loaded ? buildSlidePlan(questions, activeJokers.length > 0) : [];
   const currentSlide = slidePlan[currentIndex];
+  const slideKind = currentSlide?.kind;
+
+  // Duck the music under the reveal slide so it doesn't compete with the host awarding points.
+  useEffect(() => {
+    if (slideKind === "reveal") {
+      duckMusic();
+    } else {
+      unduckMusic();
+    }
+  }, [slideKind]);
 
   const advance = useCallback(() => {
     if (currentSlide?.kind === "reveal") {
@@ -306,6 +330,12 @@ export function Presentation({ slug }: PresentationProps) {
     setSoundOn(next);
   }
 
+  function toggleMusic() {
+    const next = !musicOn;
+    setMusicEnabled(next);
+    setMusicOn(next);
+  }
+
   async function requestFullscreenManually() {
     try {
       await document.documentElement.requestFullscreen();
@@ -349,6 +379,16 @@ export function Presentation({ slug }: PresentationProps) {
           aria-label={t(soundOn ? "presentation.muteSoundButton" : "presentation.unmuteSoundButton")}
         >
           {soundOn ? <Volume2 /> : <VolumeX />}
+        </Button>
+        <Button
+          size="icon"
+          variant="outline"
+          onClick={toggleMusic}
+          aria-pressed={musicOn}
+          className={musicOn ? undefined : "opacity-40"}
+          aria-label={t(musicOn ? "presentation.muteMusicButton" : "presentation.unmuteMusicButton")}
+        >
+          <Music4 />
         </Button>
       </div>
 

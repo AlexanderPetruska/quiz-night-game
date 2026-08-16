@@ -212,6 +212,8 @@ const fr: Record<TranslationKey, string> = {
   "presentation.enterFullscreenButton": "Plein écran",
   "presentation.muteSoundButton": "Couper les effets sonores",
   "presentation.unmuteSoundButton": "Activer les effets sonores",
+  "presentation.muteMusicButton": "Couper la musique de fond",
+  "presentation.unmuteMusicButton": "Activer la musique de fond",
   "presentation.exitConfirmTitle": "Quitter la présentation ?",
   "presentation.exitConfirmDescription":
     "Vous avez quitté le plein écran. Reprenez la présentation ou terminez-la et revenez à Mes quiz.",

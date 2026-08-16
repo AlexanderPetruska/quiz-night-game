@@ -143,3 +143,145 @@ export function playFanfare(): void {
     { offset: 0.45, freq: 1046.5, duration: 0.5, type: "triangle", peakGain: 0.24 },
   ]);
 }
+
+/**
+ * Looping background music, synthesized like everything else here — a bouncy bassline, a
+ * syncopated arpeggio, and off-beat clicks over an upbeat I–vi–IV–V progression. Uses the
+ * standard "lookahead" scheduling technique (poll frequently, schedule notes into the Web Audio
+ * clock slightly ahead of time) so the loop stays tight regardless of JS timer jitter.
+ */
+
+const MUSIC_ENABLED_KEY = "quiz-night-music-enabled";
+
+export function isMusicEnabled(): boolean {
+  return localStorage.getItem(MUSIC_ENABLED_KEY) !== "false";
+}
+
+export function setMusicEnabled(enabled: boolean): void {
+  localStorage.setItem(MUSIC_ENABLED_KEY, String(enabled));
+}
+
+const MUSIC_BPM = 128;
+const SIXTEENTH_SECONDS = 60 / MUSIC_BPM / 4;
+const STEPS_PER_BAR = 16;
+const SCHEDULE_AHEAD_SECONDS = 0.1;
+const SCHEDULER_INTERVAL_MS = 25;
+const MUSIC_NORMAL_GAIN = 0.05;
+const MUSIC_DUCKED_GAIN = 0.015;
+const GAIN_RAMP_SECONDS = 0.4;
+
+/** One bar each; bass is the chord root, arp cycles through the chord on eighth notes. */
+const MUSIC_PROGRESSION = [
+  { bass: 130.81, arp: [261.63, 329.63, 392.0, 329.63] }, // C
+  { bass: 110.0, arp: [220.0, 261.63, 329.63, 261.63] }, // Am
+  { bass: 87.31, arp: [174.61, 220.0, 261.63, 220.0] }, // F
+  { bass: 98.0, arp: [196.0, 246.94, 293.66, 246.94] }, // G
+];
+
+interface MusicState {
+  gain: GainNode;
+  schedulerId: number;
+  nextStepTime: number;
+  step: number;
+}
+
+let music: MusicState | undefined;
+
+function pluck(
+  audioCtx: AudioContext,
+  destination: GainNode,
+  time: number,
+  freq: number,
+  duration: number,
+  type: OscillatorType,
+  peakGain: number,
+): void {
+  const osc = audioCtx.createOscillator();
+  const toneGain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, time);
+  toneGain.gain.setValueAtTime(0, time);
+  toneGain.gain.linearRampToValueAtTime(peakGain, time + 0.008);
+  toneGain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+  osc.connect(toneGain);
+  toneGain.connect(destination);
+  osc.start(time);
+  osc.stop(time + duration + 0.05);
+}
+
+function scheduleMusicStep(audioCtx: AudioContext, destination: GainNode, step: number, time: number): void {
+  const bar = MUSIC_PROGRESSION[Math.floor(step / STEPS_PER_BAR) % MUSIC_PROGRESSION.length];
+  const stepInBar = step % STEPS_PER_BAR;
+
+  if (stepInBar % 4 === 0) {
+    pluck(audioCtx, destination, time, bar.bass, SIXTEENTH_SECONDS * 3.5, "triangle", 1);
+  }
+  if (stepInBar % 2 === 0) {
+    const note = bar.arp[(stepInBar / 2) % bar.arp.length];
+    pluck(audioCtx, destination, time, note, SIXTEENTH_SECONDS * 1.6, "square", 0.35);
+  } else {
+    pluck(audioCtx, destination, time, 1760, SIXTEENTH_SECONDS * 0.6, "sine", 0.12);
+  }
+}
+
+/** Starts the background music loop, if enabled and not already running. */
+export function startMusic(): void {
+  if (!isMusicEnabled() || music) return;
+  const audioCtx = getContext();
+  if (!audioCtx) return;
+
+  try {
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(MUSIC_NORMAL_GAIN, audioCtx.currentTime + GAIN_RAMP_SECONDS);
+    gain.connect(audioCtx.destination);
+
+    const state: MusicState = { gain, schedulerId: 0, nextStepTime: audioCtx.currentTime, step: 0 };
+    state.schedulerId = window.setInterval(() => {
+      const ctxNow = getContext();
+      if (!ctxNow) return;
+      while (state.nextStepTime < ctxNow.currentTime + SCHEDULE_AHEAD_SECONDS) {
+        scheduleMusicStep(ctxNow, state.gain, state.step, state.nextStepTime);
+        state.nextStepTime += SIXTEENTH_SECONDS;
+        state.step += 1;
+      }
+    }, SCHEDULER_INTERVAL_MS);
+    music = state;
+  } catch {
+    // Background music is a nice-to-have — never let a scheduling error affect the presentation.
+  }
+}
+
+/** Stops the background music loop, fading out briefly rather than cutting off abruptly. */
+export function stopMusic(): void {
+  if (!music) return;
+  const { gain, schedulerId } = music;
+  window.clearInterval(schedulerId);
+  music = undefined;
+
+  const audioCtx = getContext();
+  if (!audioCtx) return;
+  gain.gain.cancelScheduledValues(audioCtx.currentTime);
+  gain.gain.setValueAtTime(gain.gain.value, audioCtx.currentTime);
+  gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+  window.setTimeout(() => gain.disconnect(), 350);
+}
+
+/** Lowers the music volume — used while a reveal/scoring slide has focus. */
+export function duckMusic(): void {
+  rampMusicGain(MUSIC_DUCKED_GAIN);
+}
+
+/** Restores the music volume after duckMusic(). */
+export function unduckMusic(): void {
+  rampMusicGain(MUSIC_NORMAL_GAIN);
+}
+
+function rampMusicGain(target: number): void {
+  if (!music) return;
+  const audioCtx = getContext();
+  if (!audioCtx) return;
+  music.gain.gain.cancelScheduledValues(audioCtx.currentTime);
+  music.gain.gain.setValueAtTime(music.gain.gain.value, audioCtx.currentTime);
+  music.gain.gain.linearRampToValueAtTime(target, audioCtx.currentTime + GAIN_RAMP_SECONDS);
+}

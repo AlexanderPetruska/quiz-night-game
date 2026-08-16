@@ -207,6 +207,8 @@ const en = {
   "presentation.enterFullscreenButton": "Enter Fullscreen",
   "presentation.muteSoundButton": "Mute sound effects",
   "presentation.unmuteSoundButton": "Unmute sound effects",
+  "presentation.muteMusicButton": "Mute background music",
+  "presentation.unmuteMusicButton": "Unmute background music",
   "presentation.exitConfirmTitle": "Exit presentation?",
   "presentation.exitConfirmDescription":
     "You left fullscreen. Resume the presentation or end it and return to My Quizzes.",

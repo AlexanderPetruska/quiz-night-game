@@ -211,6 +211,8 @@ const de: Record<TranslationKey, string> = {
   "presentation.enterFullscreenButton": "Vollbild",
   "presentation.muteSoundButton": "Soundeffekte stummschalten",
   "presentation.unmuteSoundButton": "Soundeffekte aktivieren",
+  "presentation.muteMusicButton": "Hintergrundmusik stummschalten",
+  "presentation.unmuteMusicButton": "Hintergrundmusik aktivieren",
   "presentation.exitConfirmTitle": "Präsentation beenden?",
   "presentation.exitConfirmDescription":
     "Du hast den Vollbildmodus verlassen. Setze die Präsentation fort oder beende sie und kehre zu Meine Quizze zurück.",

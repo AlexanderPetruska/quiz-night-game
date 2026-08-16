@@ -211,6 +211,8 @@ const pt: Record<TranslationKey, string> = {
   "presentation.enterFullscreenButton": "Ecrã inteiro",
   "presentation.muteSoundButton": "Silenciar efeitos sonoros",
   "presentation.unmuteSoundButton": "Ativar efeitos sonoros",
+  "presentation.muteMusicButton": "Silenciar música de fundo",
+  "presentation.unmuteMusicButton": "Ativar música de fundo",
   "presentation.exitConfirmTitle": "Sair da apresentação?",
   "presentation.exitConfirmDescription":
     "Saiu do ecrã inteiro. Retome a apresentação ou termine-a e volte aos meus questionários.",

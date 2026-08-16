@@ -210,6 +210,8 @@ const es: Record<TranslationKey, string> = {
   "presentation.enterFullscreenButton": "Pantalla completa",
   "presentation.muteSoundButton": "Silenciar efectos de sonido",
   "presentation.unmuteSoundButton": "Activar efectos de sonido",
+  "presentation.muteMusicButton": "Silenciar música de fondo",
+  "presentation.unmuteMusicButton": "Activar música de fondo",
   "presentation.exitConfirmTitle": "¿Salir de la presentación?",
   "presentation.exitConfirmDescription":
     "Has salido de pantalla completa. Reanuda la presentación o finalízala y vuelve a Mis concursos.",

@@ -211,6 +211,8 @@ const it: Record<TranslationKey, string> = {
   "presentation.enterFullscreenButton": "Schermo intero",
   "presentation.muteSoundButton": "Disattiva effetti sonori",
   "presentation.unmuteSoundButton": "Attiva effetti sonori",
+  "presentation.muteMusicButton": "Disattiva musica di sottofondo",
+  "presentation.unmuteMusicButton": "Attiva musica di sottofondo",
   "presentation.exitConfirmTitle": "Uscire dalla presentazione?",
   "presentation.exitConfirmDescription":
     "Hai lasciato la modalità a schermo intero. Riprendi la presentazione oppure terminala e torna ai miei quiz.",
