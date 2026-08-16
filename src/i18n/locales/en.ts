@@ -194,6 +194,10 @@ const en = {
   "teamSetup.usesPerTeamLabel": "Uses per team",
   "teamSetup.lastRoundLabel": "Last question usable (of {total})",
   "teamSetup.minScoreLabel": "Min. score to use",
+  "teamSetup.timerHeading": "Question Timer",
+  "teamSetup.timerLabel": "Seconds per question",
+  "teamSetup.timerHelp":
+    "Counts down on every question slide and automatically moves on when it runs out. Leave blank for no timer.",
   "teamSetup.readyHeading": "Ready?",
   "teamSetup.startQuizButton": "Start Quiz",
   "teamSetup.startingButton": "Starting…",

@@ -34,6 +34,8 @@ interface JokerSetting {
 interface Draft {
   teams: DraftTeam[];
   jokerSettings: Record<string, JokerSetting>;
+  /** Seconds shown as a countdown on every question slide; empty string = no timer. */
+  timerSeconds: string;
 }
 
 function draftKey(slug: string): string {
@@ -48,7 +50,7 @@ function defaultDraft(existingTeams: Team[], defaultTeamName: (n: number) => str
           { key: newId(), name: defaultTeamName(1), members: [], memberDraft: "" },
           { key: newId(), name: defaultTeamName(2), members: [], memberDraft: "" },
         ];
-  return { teams, jokerSettings: {} };
+  return { teams, jokerSettings: {}, timerSeconds: "" };
 }
 
 export function TeamSetup({ slug }: TeamSetupProps) {
@@ -77,7 +79,8 @@ export function TeamSetup({ slug }: TeamSetupProps) {
 
       const stored = sessionStorage.getItem(draftKey(slug));
       if (stored) {
-        setDraft(JSON.parse(stored) as Draft);
+        const parsed = JSON.parse(stored) as Draft;
+        setDraft({ ...parsed, timerSeconds: parsed.timerSeconds ?? "" });
       } else {
         const base = defaultDraft(existingTeams, defaultTeamName);
         if (loadedMeta) {
@@ -91,6 +94,8 @@ export function TeamSetup({ slug }: TeamSetupProps) {
             };
           }
           base.jokerSettings = jokerSettings;
+          base.timerSeconds =
+            loadedMeta.defaultTimerSeconds !== undefined ? String(loadedMeta.defaultTimerSeconds) : "";
         }
         setDraft(base);
       }
@@ -210,6 +215,10 @@ export function TeamSetup({ slug }: TeamSetupProps) {
     }));
   }
 
+  function setTimerSeconds(value: string) {
+    setDraft((d) => ({ ...d, timerSeconds: sanitizeNonNegativeInt(value) }));
+  }
+
   const canStart = draft.teams.every((t) => t.name.trim().length > 0);
 
   async function handleStart() {
@@ -233,7 +242,15 @@ export function TeamSetup({ slug }: TeamSetupProps) {
         }
       }
 
-      const updatedMeta: QuizMeta = { ...meta, activeJokerIds, jokerUsesPerTeam, jokerLastRound, jokerMinScore };
+      const defaultTimerSeconds = draft.timerSeconds.trim() ? Number(draft.timerSeconds) : undefined;
+      const updatedMeta: QuizMeta = {
+        ...meta,
+        activeJokerIds,
+        jokerUsesPerTeam,
+        jokerLastRound,
+        jokerMinScore,
+        defaultTimerSeconds,
+      };
       await saveQuizMeta(quizDir, updatedMeta);
 
       const teams: Team[] = draft.teams.map((t) => ({
@@ -410,6 +427,29 @@ export function TeamSetup({ slug }: TeamSetupProps) {
             </CardContent>
           </Card>
         )}
+      </div>
+
+      <div className="mb-8 space-y-4">
+        <h2 className="text-xl font-medium">{t("teamSetup.timerHeading")}</h2>
+        <Card>
+          <CardContent className="space-y-2 py-4">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="timer-seconds" className="text-sm text-muted-foreground">
+                {t("teamSetup.timerLabel")}
+              </Label>
+              <Input
+                id="timer-seconds"
+                type="text"
+                inputMode="numeric"
+                className="w-24"
+                placeholder="—"
+                value={draft.timerSeconds}
+                onChange={(e) => setTimerSeconds(e.target.value)}
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">{t("teamSetup.timerHelp")}</p>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>

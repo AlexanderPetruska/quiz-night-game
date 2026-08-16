@@ -198,6 +198,10 @@ const pt: Record<TranslationKey, string> = {
   "teamSetup.usesPerTeamLabel": "Usos por equipa",
   "teamSetup.lastRoundLabel": "Última pergunta utilizável (de {total})",
   "teamSetup.minScoreLabel": "Pontuação mín. para usar",
+  "teamSetup.timerHeading": "Temporizador da pergunta",
+  "teamSetup.timerLabel": "Segundos por pergunta",
+  "teamSetup.timerHelp":
+    "Faz a contagem decrescente em cada pergunta e avança automaticamente quando chega a zero. Deixe em branco para não usar temporizador.",
   "teamSetup.readyHeading": "Prontos?",
   "teamSetup.startQuizButton": "Iniciar questionário",
   "teamSetup.startingButton": "A iniciar…",

@@ -196,6 +196,10 @@ const sk: Record<TranslationKey, string> = {
   "teamSetup.usesPerTeamLabel": "Počet použití na tím",
   "teamSetup.lastRoundLabel": "Posledná otázka na použitie (z {total})",
   "teamSetup.minScoreLabel": "Min. skóre na použitie",
+  "teamSetup.timerHeading": "Časovač otázky",
+  "teamSetup.timerLabel": "Sekúnd na otázku",
+  "teamSetup.timerHelp":
+    "Na každej otázke beží odpočet a po uplynutí sa automaticky prejde ďalej. Ponechajte prázdne, ak nechcete časovač.",
   "teamSetup.readyHeading": "Pripravení?",
   "teamSetup.startQuizButton": "Spustiť kvíz",
   "teamSetup.startingButton": "Spúšťa sa…",
