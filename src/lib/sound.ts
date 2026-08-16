@@ -272,13 +272,29 @@ function scheduleMusicStep(audioCtx: AudioContext, destination: GainNode, step: 
   }
 }
 
-function getMusicGain(audioCtx: AudioContext): GainNode {
+/**
+ * Creates the master gain node the first time it's needed. Deliberately does NOT also schedule
+ * the initial fade-in here — see the justCreated handling in startMusic() for why: cancelling
+ * an automation event at the exact instant it was scheduled (zero real time apart, as would
+ * happen if this called applyMusicGain() immediately after) reverts the param to its *default*
+ * value — 1.0, unity gain — instead of holding the 0 we just set, which is audible as the whole
+ * first bar playing at full volume before dropping to normal a moment later.
+ *
+ * The baseline is set via a direct `.value =` assignment rather than `setValueAtTime(0, currentTime)`.
+ * A scheduled event whose time lands on (or just behind) the render quantum being processed can be
+ * applied a quantum late on some engines, letting the node's default (1.0, unity gain) leak through
+ * for a few milliseconds — audible as exactly this loud-first-beat glitch. A direct property write
+ * has no timeline race: it's in effect for every subsequent render quantum, including the very first
+ * one after the node is connected, with no dependency on how `currentTime` and the scheduler line up.
+ */
+function getMusicGain(audioCtx: AudioContext): { gain: GainNode; justCreated: boolean } {
+  const justCreated = !musicGain;
   if (!musicGain) {
     musicGain = audioCtx.createGain();
-    musicGain.gain.setValueAtTime(0, audioCtx.currentTime);
+    musicGain.gain.value = 0;
     musicGain.connect(audioCtx.destination);
   }
-  return musicGain;
+  return { gain: musicGain, justCreated };
 }
 
 function applyMusicGain(ducked: boolean): void {
@@ -317,7 +333,7 @@ export function startMusic(ducked = false): void {
       const step = Math.max(0, Math.ceil(elapsedSteps));
       const nextStepTime = musicEpoch + step * SIXTEENTH_SECONDS;
 
-      const gain = getMusicGain(audioCtx);
+      const { gain, justCreated } = getMusicGain(audioCtx);
       const state: MusicState = { schedulerId: 0, nextStepTime, step, ducked };
       state.schedulerId = window.setInterval(() => {
         const ctxNow = getContext();
@@ -329,7 +345,15 @@ export function startMusic(ducked = false): void {
         }
       }, SCHEDULER_INTERVAL_MS);
       music = state;
-      applyMusicGain(ducked);
+      if (justCreated) {
+        // Ramp straight from the baseline `.value = 0` getMusicGain() just set — no
+        // cancelScheduledValues() here, since cancelling that same-instant event is exactly
+        // what causes the gain to revert to its default (1.0) instead of holding 0.
+        const target = ducked ? MUSIC_DUCKED_GAIN : MUSIC_NORMAL_GAIN;
+        gain.gain.linearRampToValueAtTime(target, audioCtx.currentTime + GAIN_RAMP_SECONDS);
+      } else {
+        applyMusicGain(ducked);
+      }
     } catch {
       // Background music is a nice-to-have — never let a scheduling error affect the presentation.
     }
