@@ -159,24 +159,38 @@ export function TeamSetup({ slug }: TeamSetupProps) {
     }));
   }
 
+  /** type="number" still natively accepts +, -, and e as keystrokes — strip anything that isn't a digit. */
+  function sanitizeNonNegativeInt(value: string): string {
+    return value.replace(/[^0-9]/g, "");
+  }
+
   function setJokerUses(jokerId: string, uses: string) {
     setDraft((d) => ({
       ...d,
-      jokerSettings: { ...d.jokerSettings, [jokerId]: { ...defaultJokerSetting(d, jokerId), uses } },
+      jokerSettings: {
+        ...d.jokerSettings,
+        [jokerId]: { ...defaultJokerSetting(d, jokerId), uses: sanitizeNonNegativeInt(uses) },
+      },
     }));
   }
 
   function setJokerLastRound(jokerId: string, lastRound: string) {
     setDraft((d) => ({
       ...d,
-      jokerSettings: { ...d.jokerSettings, [jokerId]: { ...defaultJokerSetting(d, jokerId), lastRound } },
+      jokerSettings: {
+        ...d.jokerSettings,
+        [jokerId]: { ...defaultJokerSetting(d, jokerId), lastRound: sanitizeNonNegativeInt(lastRound) },
+      },
     }));
   }
 
   function setJokerMinScore(jokerId: string, minScore: string) {
     setDraft((d) => ({
       ...d,
-      jokerSettings: { ...d.jokerSettings, [jokerId]: { ...defaultJokerSetting(d, jokerId), minScore } },
+      jokerSettings: {
+        ...d.jokerSettings,
+        [jokerId]: { ...defaultJokerSetting(d, jokerId), minScore: sanitizeNonNegativeInt(minScore) },
+      },
     }));
   }
 
