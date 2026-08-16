@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Spinner } from "@/components/Spinner";
+import { ScreenLoading } from "@/components/ScreenLoading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -210,11 +210,7 @@ export function QuizEditor({ slug }: QuizEditorProps) {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center p-10">
-        <Spinner className="size-6" />
-      </div>
-    );
+    return <ScreenLoading />;
   }
 
   return (
