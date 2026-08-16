@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/I18nContext";
+import { rankTeams } from "@/lib/ranking";
 import { playFanfare } from "@/lib/sound";
 import { SlideFrame } from "@/screens/presentation/SlideFrame";
 import type { Team } from "@/types";
@@ -12,8 +13,7 @@ interface FinalSlideProps {
 
 export function FinalSlide({ teams, onEnd }: FinalSlideProps) {
   const { t } = useTranslation();
-  const sorted = [...teams].sort((a, b) => b.score - a.score);
-  const topScore = sorted[0]?.score;
+  const ranked = rankTeams(teams);
 
   useEffect(() => {
     playFanfare();
@@ -23,8 +23,8 @@ export function FinalSlide({ teams, onEnd }: FinalSlideProps) {
     <SlideFrame slideKey="final" onAdvance={() => {}} clickable={false}>
       <h1 className="mb-10 text-5xl font-bold">{t("presentation.final.heading")}</h1>
       <div className="w-full max-w-2xl space-y-3">
-        {sorted.map((team, i) => {
-          const isWinner = team.score === topScore;
+        {ranked.map(({ team, rank }) => {
+          const isWinner = rank === 1;
           return (
             <div
               key={team.id}
@@ -35,7 +35,7 @@ export function FinalSlide({ teams, onEnd }: FinalSlideProps) {
               }`}
             >
               <span className="font-semibold">
-                {i + 1}. {team.name} {isWinner && "🏆"}
+                {rank}. {team.name} {isWinner && "🏆"}
               </span>
               <span className="font-mono tabular-nums">{t("presentation.scorePts", { count: team.score })}</span>
             </div>
