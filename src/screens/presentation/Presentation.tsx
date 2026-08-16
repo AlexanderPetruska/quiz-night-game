@@ -414,7 +414,7 @@ export function Presentation({ slug }: PresentationProps) {
       {showScoreboard && <ScoreboardPanel teams={teams} />}
 
       <Dialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{t("presentation.exitConfirmTitle")}</DialogTitle>
             <DialogDescription>{t("presentation.exitConfirmDescription")}</DialogDescription>
