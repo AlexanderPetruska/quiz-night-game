@@ -336,7 +336,7 @@ export function Presentation({ slug }: PresentationProps) {
 
   return (
     <div className="relative flex min-h-svh bg-background">
-      <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+      <div className="absolute left-4 top-4 z-10 flex items-center gap-2">
         {!isFullscreen && (
           <Button size="sm" variant="outline" onClick={requestFullscreenManually}>
             {t("presentation.enterFullscreenButton")}
