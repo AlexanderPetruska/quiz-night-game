@@ -196,8 +196,6 @@ const sk: Record<TranslationKey, string> = {
   "teamSetup.usesPerTeamLabel": "Počet použití na tím",
   "teamSetup.lastRoundLabel": "Posledná otázka na použitie (z {total})",
   "teamSetup.minScoreLabel": "Min. skóre na použitie",
-  "teamSetup.noLimitPlaceholder": "Ľubovoľná",
-  "teamSetup.noMinimumPlaceholder": "Žiadne",
   "teamSetup.readyHeading": "Pripravení?",
   "teamSetup.startQuizButton": "Spustiť kvíz",
   "teamSetup.startingButton": "Spúšťa sa…",

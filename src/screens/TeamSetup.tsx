@@ -353,8 +353,8 @@ export function TeamSetup({ slug }: TeamSetupProps) {
                             type="number"
                             min="1"
                             max={questionCount || undefined}
-                            className="w-20"
-                            placeholder={t("teamSetup.noLimitPlaceholder")}
+                            className="w-24"
+                            placeholder="—"
                             value={setting?.lastRound ?? ""}
                             onChange={(e) => setJokerLastRound(joker.id, e.target.value)}
                           />
@@ -366,8 +366,8 @@ export function TeamSetup({ slug }: TeamSetupProps) {
                           <Input
                             id={`min-score-${joker.id}`}
                             type="number"
-                            className="w-20"
-                            placeholder={t("teamSetup.noMinimumPlaceholder")}
+                            className="w-24"
+                            placeholder="—"
                             value={setting?.minScore ?? ""}
                             onChange={(e) => setJokerMinScore(joker.id, e.target.value)}
                           />

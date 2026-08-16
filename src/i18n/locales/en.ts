@@ -194,8 +194,6 @@ const en = {
   "teamSetup.usesPerTeamLabel": "Uses per team",
   "teamSetup.lastRoundLabel": "Last question usable (of {total})",
   "teamSetup.minScoreLabel": "Min. score to use",
-  "teamSetup.noLimitPlaceholder": "Any",
-  "teamSetup.noMinimumPlaceholder": "None",
   "teamSetup.readyHeading": "Ready?",
   "teamSetup.startQuizButton": "Start Quiz",
   "teamSetup.startingButton": "Starting…",
