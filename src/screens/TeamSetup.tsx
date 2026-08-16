@@ -159,9 +159,23 @@ export function TeamSetup({ slug }: TeamSetupProps) {
     }));
   }
 
-  /** type="number" still natively accepts +, -, and e as keystrokes — strip anything that isn't a digit. */
+  /**
+   * type="number" turned out not to be trustworthy for this: browsers only expose e.target.value
+   * for states the field considers a "valid" number, so a stray "-" typed mid-string (e.g.
+   * "1-231") makes the browser report an empty value while still displaying the invalid text —
+   * our regex was sanitizing that phantom "" instead of what was actually on screen, so the
+   * junk characters never got removed. Plain text input with our own digit-only filtering
+   * sidesteps that quirk entirely, since e.target.value always reflects what's really displayed.
+   */
   function sanitizeNonNegativeInt(value: string): string {
     return value.replace(/[^0-9]/g, "");
+  }
+
+  /** Clamps a sanitized digit string to [1, max], dropping leading zeros. Empty stays empty. */
+  function clampToRange(value: string, max: number): string {
+    if (!value) return value;
+    const n = Math.min(Math.max(Number(value), 1), max);
+    return String(n);
   }
 
   function setJokerUses(jokerId: string, uses: string) {
@@ -175,11 +189,13 @@ export function TeamSetup({ slug }: TeamSetupProps) {
   }
 
   function setJokerLastRound(jokerId: string, lastRound: string) {
+    const sanitized = sanitizeNonNegativeInt(lastRound);
+    const clamped = questionCount > 0 ? clampToRange(sanitized, questionCount) : sanitized;
     setDraft((d) => ({
       ...d,
       jokerSettings: {
         ...d.jokerSettings,
-        [jokerId]: { ...defaultJokerSetting(d, jokerId), lastRound: sanitizeNonNegativeInt(lastRound) },
+        [jokerId]: { ...defaultJokerSetting(d, jokerId), lastRound: clamped },
       },
     }));
   }
@@ -351,8 +367,8 @@ export function TeamSetup({ slug }: TeamSetupProps) {
                           </Label>
                           <Input
                             id={`uses-${joker.id}`}
-                            type="number"
-                            min="0"
+                            type="text"
+                            inputMode="numeric"
                             className="w-20"
                             value={setting?.uses ?? "1"}
                             onChange={(e) => setJokerUses(joker.id, e.target.value)}
@@ -364,9 +380,8 @@ export function TeamSetup({ slug }: TeamSetupProps) {
                           </Label>
                           <Input
                             id={`last-round-${joker.id}`}
-                            type="number"
-                            min="1"
-                            max={questionCount || undefined}
+                            type="text"
+                            inputMode="numeric"
                             className="w-24"
                             placeholder="—"
                             value={setting?.lastRound ?? ""}
@@ -379,7 +394,8 @@ export function TeamSetup({ slug }: TeamSetupProps) {
                           </Label>
                           <Input
                             id={`min-score-${joker.id}`}
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
                             className="w-24"
                             placeholder="—"
                             value={setting?.minScore ?? ""}
