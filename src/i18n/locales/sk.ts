@@ -205,6 +205,8 @@ const sk: Record<TranslationKey, string> = {
   "questionPreview.notice": "Toto je náhľad — žiadne skóre sa nemení.",
 
   "presentation.enterFullscreenButton": "Prejsť na celú obrazovku",
+  "presentation.muteSoundButton": "Stlmiť zvukové efekty",
+  "presentation.unmuteSoundButton": "Zapnúť zvukové efekty",
   "presentation.exitConfirmTitle": "Ukončiť prezentáciu?",
   "presentation.exitConfirmDescription":
     "Opustili ste režim celej obrazovky. Pokračujte v prezentácii, alebo ju ukončite a vráťte sa do Moje kvízy.",

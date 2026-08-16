@@ -207,6 +207,8 @@ const pt: Record<TranslationKey, string> = {
   "questionPreview.notice": "Isto é uma pré-visualização — nenhuma pontuação é afetada.",
 
   "presentation.enterFullscreenButton": "Ecrã inteiro",
+  "presentation.muteSoundButton": "Silenciar efeitos sonoros",
+  "presentation.unmuteSoundButton": "Ativar efeitos sonoros",
   "presentation.exitConfirmTitle": "Sair da apresentação?",
   "presentation.exitConfirmDescription":
     "Saiu do ecrã inteiro. Retome a apresentação ou termine-a e volte aos meus questionários.",

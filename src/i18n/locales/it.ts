@@ -207,6 +207,8 @@ const it: Record<TranslationKey, string> = {
   "questionPreview.notice": "Questa è un'anteprima — nessun punteggio viene modificato.",
 
   "presentation.enterFullscreenButton": "Schermo intero",
+  "presentation.muteSoundButton": "Disattiva effetti sonori",
+  "presentation.unmuteSoundButton": "Attiva effetti sonori",
   "presentation.exitConfirmTitle": "Uscire dalla presentazione?",
   "presentation.exitConfirmDescription":
     "Hai lasciato la modalità a schermo intero. Riprendi la presentazione oppure terminala e torna ai miei quiz.",

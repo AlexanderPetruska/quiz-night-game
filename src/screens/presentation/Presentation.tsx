@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,6 +12,15 @@ import {
 import { useAppContext } from "@/context/AppContext";
 import { useTranslation } from "@/i18n/I18nContext";
 import { getIncomingSteals } from "@/lib/jokers";
+import {
+  isSoundEnabled,
+  playConfirm,
+  playCorrect,
+  playFreeze,
+  playIncorrect,
+  playJoker,
+  setSoundEnabled,
+} from "@/lib/sound";
 import { getQuizDir, loadQuestions, loadQuizMeta, loadTeams, saveTeams } from "@/lib/store";
 import { FinalSlide } from "@/screens/presentation/FinalSlide";
 import { IntroSlide } from "@/screens/presentation/IntroSlide";
@@ -53,6 +63,7 @@ export function Presentation({ slug }: PresentationProps) {
   const [manualAmounts, setManualAmounts] = useState<Record<string, string>>({});
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [soundOn, setSoundOn] = useState(() => isSoundEnabled());
   const enteredFullscreenRef = useRef(false);
 
   useEffect(() => {
@@ -179,6 +190,7 @@ export function Presentation({ slug }: PresentationProps) {
         return t;
       });
     });
+    playJoker();
   }
 
   function handleUndoJoker(teamId: string) {
@@ -241,6 +253,11 @@ export function Presentation({ slug }: PresentationProps) {
     );
     setScoredKeys((prev) => new Set(prev).add(k));
     setAppliedDeltas((prev) => ({ ...prev, [k]: { ownDelta, stealTransfers } }));
+
+    if (outcome === "correct") playCorrect();
+    else if (outcome === "incorrect") playIncorrect();
+    else if (outcome === "frozen") playFreeze();
+    else playConfirm();
   }
 
   function handleUndoAward(teamId: string) {
@@ -275,6 +292,12 @@ export function Presentation({ slug }: PresentationProps) {
     setManualAmounts((prev) => ({ ...prev, [keyFor(question.id, teamId)]: value }));
   }
 
+  function toggleSound() {
+    const next = !soundOn;
+    setSoundEnabled(next);
+    setSoundOn(next);
+  }
+
   async function requestFullscreenManually() {
     try {
       await document.documentElement.requestFullscreen();
@@ -305,16 +328,21 @@ export function Presentation({ slug }: PresentationProps) {
 
   return (
     <div className="relative flex min-h-svh bg-background">
-      {!isFullscreen && (
+      <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+        {!isFullscreen && (
+          <Button size="sm" variant="outline" onClick={requestFullscreenManually}>
+            {t("presentation.enterFullscreenButton")}
+          </Button>
+        )}
         <Button
-          className="absolute right-4 top-4 z-10"
-          size="sm"
+          size="icon"
           variant="outline"
-          onClick={requestFullscreenManually}
+          onClick={toggleSound}
+          aria-label={t(soundOn ? "presentation.muteSoundButton" : "presentation.unmuteSoundButton")}
         >
-          {t("presentation.enterFullscreenButton")}
+          {soundOn ? <Volume2 /> : <VolumeX />}
         </Button>
-      )}
+      </div>
 
       <div className="min-w-0 flex-1">
         {currentSlide?.kind === "intro" && (

@@ -208,6 +208,8 @@ const fr: Record<TranslationKey, string> = {
   "questionPreview.notice": "Ceci est un aperçu — aucun score n'est affecté.",
 
   "presentation.enterFullscreenButton": "Plein écran",
+  "presentation.muteSoundButton": "Couper les effets sonores",
+  "presentation.unmuteSoundButton": "Activer les effets sonores",
   "presentation.exitConfirmTitle": "Quitter la présentation ?",
   "presentation.exitConfirmDescription":
     "Vous avez quitté le plein écran. Reprenez la présentation ou terminez-la et revenez à Mes quiz.",

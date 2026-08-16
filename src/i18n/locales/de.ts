@@ -207,6 +207,8 @@ const de: Record<TranslationKey, string> = {
   "questionPreview.notice": "Dies ist eine Vorschau — es werden keine Punktzahlen verändert.",
 
   "presentation.enterFullscreenButton": "Vollbild",
+  "presentation.muteSoundButton": "Soundeffekte stummschalten",
+  "presentation.unmuteSoundButton": "Soundeffekte aktivieren",
   "presentation.exitConfirmTitle": "Präsentation beenden?",
   "presentation.exitConfirmDescription":
     "Du hast den Vollbildmodus verlassen. Setze die Präsentation fort oder beende sie und kehre zu Meine Quizze zurück.",

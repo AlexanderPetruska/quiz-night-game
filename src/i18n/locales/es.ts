@@ -206,6 +206,8 @@ const es: Record<TranslationKey, string> = {
   "questionPreview.notice": "Esto es una vista previa — no afecta a ninguna puntuación.",
 
   "presentation.enterFullscreenButton": "Pantalla completa",
+  "presentation.muteSoundButton": "Silenciar efectos de sonido",
+  "presentation.unmuteSoundButton": "Activar efectos de sonido",
   "presentation.exitConfirmTitle": "¿Salir de la presentación?",
   "presentation.exitConfirmDescription":
     "Has salido de pantalla completa. Reanuda la presentación o finalízala y vuelve a Mis concursos.",

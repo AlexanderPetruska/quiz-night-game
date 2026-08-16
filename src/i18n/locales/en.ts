@@ -203,6 +203,8 @@ const en = {
   "questionPreview.notice": "This is a preview — no scores are affected.",
 
   "presentation.enterFullscreenButton": "Enter Fullscreen",
+  "presentation.muteSoundButton": "Mute sound effects",
+  "presentation.unmuteSoundButton": "Unmute sound effects",
   "presentation.exitConfirmTitle": "Exit presentation?",
   "presentation.exitConfirmDescription":
     "You left fullscreen. Resume the presentation or end it and return to My Quizzes.",

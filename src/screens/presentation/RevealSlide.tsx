@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTranslation } from "@/i18n/I18nContext";
@@ -8,6 +9,7 @@ import {
   jokerUsedForQuestion,
 } from "@/lib/jokers";
 import type { AwardNote } from "@/lib/jokers";
+import { playReveal } from "@/lib/sound";
 import { SlideFrame } from "@/screens/presentation/SlideFrame";
 import { stopAdvance } from "@/screens/presentation/interaction";
 import type { Joker, Question, Team } from "@/types";
@@ -42,6 +44,10 @@ export function RevealSlide({
   const { t } = useTranslation();
   const allScored = teams.every((t) => scoredTeamIds.has(t.id));
   const remaining = teams.length - scoredTeamIds.size;
+
+  useEffect(() => {
+    playReveal();
+  }, [question.id]);
 
   const hasRevealContent = question.type === "choice" || !!question.correctAnswerText;
 

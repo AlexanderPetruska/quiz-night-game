@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/I18nContext";
+import { playFanfare } from "@/lib/sound";
 import { SlideFrame } from "@/screens/presentation/SlideFrame";
 import type { Team } from "@/types";
 
@@ -12,6 +14,10 @@ export function FinalSlide({ teams, onEnd }: FinalSlideProps) {
   const { t } = useTranslation();
   const sorted = [...teams].sort((a, b) => b.score - a.score);
   const topScore = sorted[0]?.score;
+
+  useEffect(() => {
+    playFanfare();
+  }, []);
 
   return (
     <SlideFrame slideKey="final" onAdvance={() => {}} clickable={false}>

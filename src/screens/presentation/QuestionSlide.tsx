@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useTranslation } from "@/i18n/I18nContext";
+import { playTimerUp } from "@/lib/sound";
 import { SlideFrame } from "@/screens/presentation/SlideFrame";
 import type { Question } from "@/types";
 
@@ -26,6 +27,7 @@ function CountdownTimer({ seconds, onExpire }: { seconds: number; onExpire: () =
       setRemaining(left);
       if (left <= 0) {
         clearInterval(interval);
+        playTimerUp();
         onExpireRef.current();
       }
     }, 100);
