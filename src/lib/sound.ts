@@ -8,6 +8,26 @@ const ENABLED_KEY = "quiz-night-sound-enabled";
 
 let ctx: AudioContext | undefined;
 
+/**
+ * A freshly-created AudioContext's very first rendered audio can come out glitchy/louder than
+ * scheduled on some browser/OS combinations — a cold-start artifact of the underlying audio
+ * pipeline, not something AudioParam automation controls. A context reused across multiple
+ * presentations in the same tab doesn't have this problem since it's already warmed up. The
+ * standard mitigation is to render a silent buffer immediately so the pipeline's cold-start
+ * hiccup consumes silence instead of the first real note.
+ */
+function primeAudioPipeline(audioCtx: AudioContext): void {
+  try {
+    const buffer = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioCtx.destination);
+    source.start(0);
+  } catch {
+    // Best-effort warm-up — a failure here shouldn't affect anything else.
+  }
+}
+
 function getContext(): AudioContext | undefined {
   if (typeof window === "undefined") return undefined;
   try {
@@ -16,6 +36,7 @@ function getContext(): AudioContext | undefined {
     if (!AudioContextClass) return undefined;
     if (!ctx) {
       ctx = new AudioContextClass();
+      primeAudioPipeline(ctx);
     }
     if (ctx.state === "suspended") {
       void ctx.resume();
@@ -171,6 +192,9 @@ const SCHEDULER_INTERVAL_MS = 25;
 const MUSIC_NORMAL_GAIN = 0.05;
 const MUSIC_DUCKED_GAIN = 0.015;
 const GAIN_RAMP_SECONDS = 0.4;
+/** Extra delay before the very first-ever note, giving primeAudioPipeline()'s warm-up a moment
+ * to actually render before real content starts. Only applies once, to musicEpoch's first value. */
+const STARTUP_GRACE_SECONDS = 0.15;
 
 /** One bar each; bass is the chord root, arp cycles through the chord on eighth notes. */
 const MUSIC_PROGRESSION = [
@@ -288,7 +312,7 @@ export function startMusic(ducked = false): void {
   const begin = () => {
     if (generation !== musicGeneration) return; // superseded by a stop (or another start) meanwhile
     try {
-      if (musicEpoch === undefined) musicEpoch = audioCtx.currentTime;
+      if (musicEpoch === undefined) musicEpoch = audioCtx.currentTime + STARTUP_GRACE_SECONDS;
       const elapsedSteps = (audioCtx.currentTime - musicEpoch) / SIXTEENTH_SECONDS;
       const step = Math.max(0, Math.ceil(elapsedSteps));
       const nextStepTime = musicEpoch + step * SIXTEENTH_SECONDS;
