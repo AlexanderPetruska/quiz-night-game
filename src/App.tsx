@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/AppShell";
 import { Toaster } from "@/components/ui/sonner";
+import { I18nProvider } from "@/i18n/I18nContext";
 import { isFileSystemAccessSupported, verifyPermission, verifyRootAccessible } from "@/lib/fs";
 import { clearStoredRootHandle, getStoredRootHandle } from "@/lib/idb";
 import { LoadingScreen } from "@/screens/LoadingScreen";
@@ -42,7 +43,7 @@ function App() {
   }, []);
 
   return (
-    <>
+    <I18nProvider>
       {boot.status === "checking" && <LoadingScreen />}
       {boot.status === "unsupported" && <UnsupportedBrowser />}
       {boot.status === "needsFolder" && (
@@ -50,7 +51,7 @@ function App() {
       )}
       {boot.status === "ready" && <AppShell root={boot.root} onRootUnavailable={handleRootUnavailable} />}
       <Toaster richColors position="top-center" />
-    </>
+    </I18nProvider>
   );
 }
 

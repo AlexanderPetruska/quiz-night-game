@@ -1,15 +1,16 @@
+import type { TranslationKey } from "@/i18n/locales/en";
 import type { Joker, JokerEffectType, Question, Team } from "@/types";
 
-export const EFFECT_TYPE_LABELS: Record<JokerEffectType, string> = {
-  multiplier: "Point Multiplier",
-  doubleOrNothing: "Risk It (double or nothing)",
-  fiftyFifty: "50/50",
-  steal: "Steal Points",
-  freeze: "Freeze Opponent",
-  safetyNet: "Safety Net",
-  hint: "Hint for Half Points",
-  scoreSwap: "Score Swap",
-  manual: "Custom Rule (I'll assign points manually)",
+export const EFFECT_TYPE_LABEL_KEYS: Record<JokerEffectType, TranslationKey> = {
+  multiplier: "jokers.effectType.multiplier",
+  doubleOrNothing: "jokers.effectType.doubleOrNothing",
+  fiftyFifty: "jokers.effectType.fiftyFifty",
+  steal: "jokers.effectType.steal",
+  freeze: "jokers.effectType.freeze",
+  safetyNet: "jokers.effectType.safetyNet",
+  hint: "jokers.effectType.hint",
+  scoreSwap: "jokers.effectType.scoreSwap",
+  manual: "jokers.effectType.manual",
 };
 
 export const EFFECT_TYPES_NEEDING_MULTIPLIER: JokerEffectType[] = ["multiplier", "doubleOrNothing"];
@@ -19,62 +20,70 @@ export const EFFECT_TYPES_CHOICE_ONLY: JokerEffectType[] = ["fiftyFifty"];
 /** Effect types that act on another team and need a target picked when invoked. */
 export const EFFECT_TYPES_NEEDING_TARGET: JokerEffectType[] = ["steal", "freeze", "scoreSwap"];
 
-export type StarterTemplate = Omit<Joker, "id">;
+export interface StarterTemplateDef {
+  effectType: JokerEffectType;
+  icon: string;
+  nameKey: TranslationKey;
+  descriptionKey: TranslationKey;
+  multiplierValue?: number;
+  penaltyFraction?: number;
+}
 
-export const STARTER_TEMPLATES: StarterTemplate[] = [
+export const STARTER_TEMPLATES: StarterTemplateDef[] = [
   {
-    name: "Double Points",
-    icon: "✨",
-    description: "Correct answer scores double points.",
     effectType: "multiplier",
+    icon: "✨",
+    nameKey: "jokerTemplates.doublePoints.name",
+    descriptionKey: "jokerTemplates.doublePoints.description",
     multiplierValue: 2,
   },
   {
-    name: "Risk It",
-    icon: "🎲",
-    description:
-      "Double or nothing: correct answer doubles the points, incorrect answer loses points equal to the question's value.",
     effectType: "doubleOrNothing",
+    icon: "🎲",
+    nameKey: "jokerTemplates.riskIt.name",
+    descriptionKey: "jokerTemplates.riskIt.description",
     multiplierValue: 2,
   },
   {
-    name: "50/50",
-    icon: "➗",
-    description: "Host eliminates two wrong options before the reveal (multiple choice only).",
     effectType: "fiftyFifty",
+    icon: "➗",
+    nameKey: "jokerTemplates.fiftyFifty.name",
+    descriptionKey: "jokerTemplates.fiftyFifty.description",
   },
   {
-    name: "Steal",
-    icon: "🥷",
-    description: "Take points from a chosen team if they answer incorrectly.",
     effectType: "steal",
+    icon: "🥷",
+    nameKey: "jokerTemplates.steal.name",
+    descriptionKey: "jokerTemplates.steal.description",
   },
   {
-    name: "Freeze",
-    icon: "🧊",
-    description: "A chosen opposing team scores 0 for this question, regardless of their answer.",
     effectType: "freeze",
+    icon: "🧊",
+    nameKey: "jokerTemplates.freeze.name",
+    descriptionKey: "jokerTemplates.freeze.description",
   },
   {
-    name: "Safety Net",
-    icon: "🛟",
-    description: "No point loss on an incorrect answer for this question.",
     effectType: "safetyNet",
+    icon: "🛟",
+    nameKey: "jokerTemplates.safetyNet.name",
+    descriptionKey: "jokerTemplates.safetyNet.description",
   },
   {
-    name: "Hint",
-    icon: "💡",
-    description: "Correct answer only awards half points.",
     effectType: "hint",
+    icon: "💡",
+    nameKey: "jokerTemplates.hint.name",
+    descriptionKey: "jokerTemplates.hint.description",
     penaltyFraction: 0.5,
   },
   {
-    name: "Score Swap",
-    icon: "🔄",
-    description: "Swap this team's total score with a chosen team's total score.",
     effectType: "scoreSwap",
+    icon: "🔄",
+    nameKey: "jokerTemplates.scoreSwap.name",
+    descriptionKey: "jokerTemplates.scoreSwap.description",
   },
 ];
+
+export type AwardNote = { key: TranslationKey; vars: Record<string, string | number> } | { raw: string };
 
 export interface AwardSuggestion {
   /** Suggested points to award for a correct answer. */
@@ -84,7 +93,7 @@ export interface AwardSuggestion {
   /** When true, the host should use a free-form +/- control instead of the suggested amounts. */
   manual: boolean;
   /** Optional reminder shown to the host about the joker's effect. */
-  note?: string;
+  note?: AwardNote;
 }
 
 /** The joker a team invoked for a given question (a team may invoke at most one joker per question). */
@@ -147,6 +156,8 @@ export function computeAwardSuggestion(question: Question, joker: Joker | undefi
     return { correctAmount: points, incorrectAmount: 0, manual: false };
   }
 
+  const jokerName = joker.name;
+
   switch (joker.effectType) {
     case "multiplier": {
       const mult = joker.multiplierValue ?? 2;
@@ -154,7 +165,7 @@ export function computeAwardSuggestion(question: Question, joker: Joker | undefi
         correctAmount: Math.round(points * mult),
         incorrectAmount: 0,
         manual: false,
-        note: `${joker.name}: correct answer worth ${mult}x points.`,
+        note: { key: "jokers.note.multiplier", vars: { jokerName, mult } },
       };
     }
     case "doubleOrNothing": {
@@ -163,7 +174,7 @@ export function computeAwardSuggestion(question: Question, joker: Joker | undefi
         correctAmount: Math.round(points * mult),
         incorrectAmount: -points,
         manual: false,
-        note: `${joker.name}: correct doubles points, incorrect loses ${points}.`,
+        note: { key: "jokers.note.doubleOrNothing", vars: { jokerName, points } },
       };
     }
     case "hint": {
@@ -172,7 +183,7 @@ export function computeAwardSuggestion(question: Question, joker: Joker | undefi
         correctAmount: Math.round(points * (1 - penalty)),
         incorrectAmount: 0,
         manual: false,
-        note: `${joker.name}: reduced to ${Math.round((1 - penalty) * 100)}% of points.`,
+        note: { key: "jokers.note.hint", vars: { jokerName, percent: Math.round((1 - penalty) * 100) } },
       };
     }
     case "safetyNet":
@@ -180,14 +191,14 @@ export function computeAwardSuggestion(question: Question, joker: Joker | undefi
         correctAmount: points,
         incorrectAmount: 0,
         manual: false,
-        note: `${joker.name}: no point loss possible this question.`,
+        note: { key: "jokers.note.safetyNet", vars: { jokerName } },
       };
     case "fiftyFifty":
       return {
         correctAmount: points,
         incorrectAmount: 0,
         manual: false,
-        note: `${joker.name}: two wrong options were eliminated before reveal.`,
+        note: { key: "jokers.note.fiftyFifty", vars: { jokerName } },
       };
     case "steal":
       // Steal doesn't change the inviting team's own award — it moves points from the target,
@@ -196,7 +207,7 @@ export function computeAwardSuggestion(question: Question, joker: Joker | undefi
         correctAmount: points,
         incorrectAmount: 0,
         manual: false,
-        note: `${joker.name}: played against another team — see that team's row.`,
+        note: { key: "jokers.note.steal", vars: { jokerName } },
       };
     case "freeze":
       // Freeze doesn't change the inviting team's own award either.
@@ -204,14 +215,14 @@ export function computeAwardSuggestion(question: Question, joker: Joker | undefi
         correctAmount: points,
         incorrectAmount: 0,
         manual: false,
-        note: `${joker.name}: played against another team — see that team's row.`,
+        note: { key: "jokers.note.freeze", vars: { jokerName } },
       };
     case "scoreSwap":
       return {
         correctAmount: points,
         incorrectAmount: 0,
         manual: false,
-        note: `${joker.name}: scores were already swapped when this was played.`,
+        note: { key: "jokers.note.scoreSwap", vars: { jokerName } },
       };
     case "manual":
     default:
@@ -219,7 +230,9 @@ export function computeAwardSuggestion(question: Question, joker: Joker | undefi
         correctAmount: points,
         incorrectAmount: 0,
         manual: true,
-        note: joker.description || `${joker.name}: assign points manually.`,
+        note: joker.description
+          ? { raw: joker.description }
+          : { key: "jokers.note.manualFallback", vars: { jokerName } },
       };
   }
 }

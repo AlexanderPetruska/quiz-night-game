@@ -19,6 +19,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppContext } from "@/context/AppContext";
+import { useTranslation } from "@/i18n/I18nContext";
 import { deleteProofFile, getQuizDir, loadQuestions, loadQuizMeta, newId, saveProofFile, saveQuestions } from "@/lib/store";
 import { QuestionPreview } from "@/screens/QuestionPreview";
 import type { Question, QuestionType } from "@/types";
@@ -73,6 +74,7 @@ function questionToForm(q: Question): QuestionFormState {
 
 export function QuizEditor({ slug }: QuizEditorProps) {
   const { root, navigate } = useAppContext();
+  const { t } = useTranslation();
   const [quizDir, setQuizDir] = useState<FileSystemDirectoryHandle | undefined>();
   const [quizName, setQuizName] = useState("");
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -177,9 +179,9 @@ export function QuizEditor({ slug }: QuizEditorProps) {
       const next = isNew ? [...questions, question] : questions.map((q) => (q.id === id ? question : q));
       await persistQuestions(next);
       setFormOpen(false);
-      toast.success(isNew ? "Question added." : "Question updated.");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save question.");
+      toast.success(isNew ? t("quizEditor.toastQuestionAdded") : t("quizEditor.toastQuestionUpdated"));
+    } catch {
+      toast.error(t("quizEditor.toastCouldNotSave"));
     } finally {
       setSaving(false);
     }
@@ -193,9 +195,9 @@ export function QuizEditor({ slug }: QuizEditorProps) {
       }
       const next = questions.filter((q) => q.id !== deleteTarget.id);
       await persistQuestions(next);
-      toast.success("Question deleted.");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not delete question.");
+      toast.success(t("quizEditor.toastQuestionDeleted"));
+    } catch {
+      toast.error(t("quizEditor.toastCouldNotDelete"));
     } finally {
       setDeleteTarget(undefined);
     }
@@ -216,25 +218,23 @@ export function QuizEditor({ slug }: QuizEditorProps) {
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
       <Button variant="ghost" className="mb-4 -ml-3" onClick={() => navigate({ name: "myQuizzes" })}>
-        ← Back to My Quizzes
+        {t("quizEditor.backButton")}
       </Button>
 
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">{quizName}</h1>
-          <p className="text-muted-foreground">
-            {questions.length} question{questions.length === 1 ? "" : "s"}
-          </p>
+          <p className="text-muted-foreground">{t("quizEditor.questionCount", { count: questions.length })}</p>
         </div>
         <Button size="lg" onClick={openCreate}>
-          + Add Question
+          {t("quizEditor.addQuestionButton")}
         </Button>
       </div>
 
       {questions.length === 0 && (
         <Card className="border-dashed">
           <CardContent className="py-12 text-center text-muted-foreground">
-            No questions yet. Click "+ Add Question" to build your quiz.
+            {t("quizEditor.noQuestionsYet")}
           </CardContent>
         </Card>
       )}
@@ -246,10 +246,16 @@ export function QuizEditor({ slug }: QuizEditorProps) {
               <div className="flex-1 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm text-muted-foreground">#{q.order}</span>
-                  <Badge variant="outline">{q.type === "choice" ? "Multiple choice" : "Open"}</Badge>
+                  <Badge variant="outline">
+                    {q.type === "choice" ? t("quizEditor.badgeMultipleChoice") : t("quizEditor.badgeOpen")}
+                  </Badge>
                   {q.category && <Badge variant="secondary">{q.category}</Badge>}
-                  <Badge>{q.points} pt{q.points === 1 ? "" : "s"}</Badge>
-                  {q.proofFile && <Badge variant="outline">{q.proofType === "video" ? "🎬 video" : "🖼 image"}</Badge>}
+                  <Badge>{t("quizEditor.pointsBadge", { count: q.points })}</Badge>
+                  {q.proofFile && (
+                    <Badge variant="outline">
+                      {q.proofType === "video" ? t("quizEditor.badgeVideo") : t("quizEditor.badgeImage")}
+                    </Badge>
+                  )}
                 </div>
                 <p className="font-medium">{q.text}</p>
               </div>
@@ -268,13 +274,13 @@ export function QuizEditor({ slug }: QuizEditorProps) {
                   </Button>
                 </div>
                 <Button size="sm" variant="outline" onClick={() => setPreviewQuestion(q)}>
-                  Preview
+                  {t("quizEditor.previewButton")}
                 </Button>
                 <Button size="sm" variant="secondary" onClick={() => openEdit(q)}>
-                  Edit
+                  {t("quizEditor.editButton")}
                 </Button>
                 <Button size="sm" variant="destructive" onClick={() => setDeleteTarget(q)}>
-                  Delete
+                  {t("quizEditor.deleteButton")}
                 </Button>
               </div>
             </CardContent>
@@ -285,12 +291,12 @@ export function QuizEditor({ slug }: QuizEditorProps) {
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>{form.id ? "Edit Question" : "Add Question"}</DialogTitle>
-            <DialogDescription>Configure the question, its proof, and its point value.</DialogDescription>
+            <DialogTitle>{form.id ? t("quizEditor.editDialogTitle") : t("quizEditor.addDialogTitle")}</DialogTitle>
+            <DialogDescription>{t("quizEditor.dialogDescription")}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2">
-            <Label htmlFor="q-text">Question text</Label>
+            <Label htmlFor="q-text">{t("quizEditor.questionTextLabel")}</Label>
             <Textarea
               id="q-text"
               value={form.text}
@@ -300,21 +306,21 @@ export function QuizEditor({ slug }: QuizEditorProps) {
           </div>
 
           <div className="space-y-2">
-            <Label>Type</Label>
+            <Label>{t("quizEditor.typeLabel")}</Label>
             <Tabs
               value={form.type}
               onValueChange={(value) => setForm({ ...form, type: value as QuestionType })}
             >
               <TabsList>
-                <TabsTrigger value="choice">Multiple choice</TabsTrigger>
-                <TabsTrigger value="open">Open (no options)</TabsTrigger>
+                <TabsTrigger value="choice">{t("quizEditor.multipleChoiceTab")}</TabsTrigger>
+                <TabsTrigger value="open">{t("quizEditor.openTab")}</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
 
           {form.type === "choice" ? (
             <div className="space-y-2">
-              <Label>Options (select the correct one)</Label>
+              <Label>{t("quizEditor.optionsLabel")}</Label>
               <RadioGroup
                 value={form.correctIndex !== undefined ? String(form.correctIndex) : undefined}
                 onValueChange={(value) => setForm({ ...form, correctIndex: Number(value) })}
@@ -330,7 +336,7 @@ export function QuizEditor({ slug }: QuizEditorProps) {
                         options[i] = e.target.value;
                         setForm({ ...form, options });
                       }}
-                      placeholder={`Option ${i + 1}`}
+                      placeholder={t("quizEditor.optionPlaceholder", { n: i + 1 })}
                     />
                   </div>
                 ))}
@@ -338,7 +344,7 @@ export function QuizEditor({ slug }: QuizEditorProps) {
             </div>
           ) : (
             <div className="space-y-2">
-              <Label htmlFor="q-answer">Correct answer (shown on reveal slide)</Label>
+              <Label htmlFor="q-answer">{t("quizEditor.correctAnswerLabel")}</Label>
               <Input
                 id="q-answer"
                 value={form.correctAnswerText}
@@ -348,7 +354,7 @@ export function QuizEditor({ slug }: QuizEditorProps) {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="q-proof">Proof (video or image, optional)</Label>
+            <Label htmlFor="q-proof">{t("quizEditor.proofLabel")}</Label>
             <Input
               id="q-proof"
               type="file"
@@ -358,36 +364,38 @@ export function QuizEditor({ slug }: QuizEditorProps) {
               }
             />
             {form.newProofFile && (
-              <p className="text-sm text-muted-foreground">New file: {form.newProofFile.name}</p>
+              <p className="text-sm text-muted-foreground">
+                {t("quizEditor.newFileLabel", { name: form.newProofFile.name })}
+              </p>
             )}
             {!form.newProofFile && form.proofFile && !form.removeProof && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Current: {form.proofFile}</span>
+                <span>{t("quizEditor.currentFileLabel", { name: form.proofFile })}</span>
                 <Button
                   type="button"
                   size="sm"
                   variant="destructive"
                   onClick={() => setForm({ ...form, removeProof: true })}
                 >
-                  Remove
+                  {t("quizEditor.removeButton")}
                 </Button>
               </div>
             )}
-            {form.removeProof && <p className="text-sm text-muted-foreground">Proof will be removed.</p>}
+            {form.removeProof && <p className="text-sm text-muted-foreground">{t("quizEditor.proofWillBeRemoved")}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="q-category">Category (optional)</Label>
+              <Label htmlFor="q-category">{t("quizEditor.categoryLabel")}</Label>
               <Input
                 id="q-category"
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
-                placeholder="Round 1"
+                placeholder={t("quizEditor.categoryPlaceholder")}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="q-points">Points</Label>
+              <Label htmlFor="q-points">{t("quizEditor.pointsLabel")}</Label>
               <Input
                 id="q-points"
                 type="number"
@@ -397,22 +405,22 @@ export function QuizEditor({ slug }: QuizEditorProps) {
               />
               <div className="flex gap-1">
                 <Button type="button" size="sm" variant="outline" onClick={() => setForm({ ...form, points: "1" })}>
-                  Easy (1)
+                  {t("quizEditor.easyButton")}
                 </Button>
                 <Button type="button" size="sm" variant="outline" onClick={() => setForm({ ...form, points: "2" })}>
-                  Medium (2)
+                  {t("quizEditor.mediumButton")}
                 </Button>
                 <Button type="button" size="sm" variant="outline" onClick={() => setForm({ ...form, points: "3" })}>
-                  Hard (3)
+                  {t("quizEditor.hardButton")}
                 </Button>
               </div>
             </div>
           </div>
 
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <DialogClose render={<Button variant="outline" />}>{t("common.cancel")}</DialogClose>
             <Button onClick={handleSaveQuestion} disabled={!isFormValid() || saving}>
-              {saving ? "Saving…" : "Save Question"}
+              {saving ? t("quizEditor.savingButton") : t("quizEditor.saveQuestionButton")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -421,13 +429,15 @@ export function QuizEditor({ slug }: QuizEditorProps) {
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(undefined)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete this question?</DialogTitle>
-            <DialogDescription>"{deleteTarget?.text}" and its proof file will be removed.</DialogDescription>
+            <DialogTitle>{t("quizEditor.deleteDialogTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("quizEditor.deleteDialogDescription", { text: deleteTarget?.text ?? "" })}
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <DialogClose render={<Button variant="outline" />}>{t("common.cancel")}</DialogClose>
             <Button variant="destructive" onClick={handleDelete}>
-              Delete
+              {t("quizEditor.deleteButton")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/i18n/I18nContext";
 import { ProofSlide } from "@/screens/presentation/ProofSlide";
 import { QuestionSlide } from "@/screens/presentation/QuestionSlide";
 import { SlideFrame } from "@/screens/presentation/SlideFrame";
@@ -14,9 +15,10 @@ interface QuestionPreviewProps {
 type Step = "question" | "proof" | "reveal";
 
 function PreviewReveal({ question }: { question: Question }) {
+  const { t } = useTranslation();
   return (
     <SlideFrame slideKey="preview-reveal" onAdvance={() => {}} clickable={false}>
-      <h2 className="mb-6 text-2xl font-medium text-muted-foreground">Correct Answer</h2>
+      <h2 className="mb-6 text-2xl font-medium text-muted-foreground">{t("questionPreview.correctAnswerHeading")}</h2>
 
       {question.type === "choice" && question.options && (
         <div className="mb-10 grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
@@ -44,12 +46,13 @@ function PreviewReveal({ question }: { question: Question }) {
         </p>
       )}
 
-      <p className="text-muted-foreground">This is a preview — no scores are affected.</p>
+      <p className="text-muted-foreground">{t("questionPreview.notice")}</p>
     </SlideFrame>
   );
 }
 
 export function QuestionPreview({ question, quizDir, onClose }: QuestionPreviewProps) {
+  const { t } = useTranslation();
   const [step, setStep] = useState<Step>("question");
 
   useEffect(() => {
@@ -72,10 +75,10 @@ export function QuestionPreview({ question, quizDir, onClose }: QuestionPreviewP
     <div className="dark fixed inset-0 z-50 bg-background">
       <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
         <span className="rounded-full bg-card px-3 py-1 text-xs font-medium text-muted-foreground ring-1 ring-border">
-          Preview
+          {t("questionPreview.badge")}
         </span>
         <Button variant="outline" size="sm" onClick={onClose}>
-          Close Preview
+          {t("questionPreview.closeButton")}
         </Button>
       </div>
 

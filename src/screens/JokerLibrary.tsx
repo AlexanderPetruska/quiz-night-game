@@ -23,17 +23,19 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppContext } from "@/context/AppContext";
+import { useTranslation } from "@/i18n/I18nContext";
 import {
   EFFECT_TYPES_NEEDING_MULTIPLIER,
   EFFECT_TYPES_NEEDING_PENALTY,
-  EFFECT_TYPE_LABELS,
+  EFFECT_TYPE_LABEL_KEYS,
   STARTER_TEMPLATES,
 } from "@/lib/jokers";
+import type { StarterTemplateDef } from "@/lib/jokers";
 import { newId } from "@/lib/store";
 import { saveJokers } from "@/lib/store";
 import type { Joker, JokerEffectType } from "@/types";
 
-const EFFECT_TYPES = Object.keys(EFFECT_TYPE_LABELS) as JokerEffectType[];
+const EFFECT_TYPES = Object.keys(EFFECT_TYPE_LABEL_KEYS) as JokerEffectType[];
 
 interface JokerFormState {
   id?: string;
@@ -68,19 +70,9 @@ function jokerToForm(joker: Joker): JokerFormState {
   };
 }
 
-function templateToForm(template: (typeof STARTER_TEMPLATES)[number]): JokerFormState {
-  return {
-    name: template.name,
-    icon: template.icon,
-    description: template.description,
-    effectType: template.effectType,
-    multiplierValue: String(template.multiplierValue ?? 2),
-    penaltyFraction: String(template.penaltyFraction ?? 0.5),
-  };
-}
-
 export function JokerLibrary() {
   const { root, jokers, refreshJokers } = useAppContext();
+  const { t } = useTranslation();
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<JokerFormState>(emptyForm());
   const [saving, setSaving] = useState(false);
@@ -96,8 +88,15 @@ export function JokerLibrary() {
     setFormOpen(true);
   }
 
-  function applyTemplate(template: (typeof STARTER_TEMPLATES)[number]) {
-    setForm(templateToForm(template));
+  function applyTemplate(template: StarterTemplateDef) {
+    setForm({
+      name: t(template.nameKey),
+      icon: template.icon,
+      description: t(template.descriptionKey),
+      effectType: template.effectType,
+      multiplierValue: String(template.multiplierValue ?? 2),
+      penaltyFraction: String(template.penaltyFraction ?? 0.5),
+    });
   }
 
   async function handleSave() {
@@ -126,9 +125,9 @@ export function JokerLibrary() {
       await saveJokers(root, next);
       await refreshJokers();
       setFormOpen(false);
-      toast.success(`Saved "${joker.name}".`);
+      toast.success(t("jokers.toastSaved", { name: joker.name }));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save joker.");
+      toast.error(err instanceof Error ? err.message : t("jokers.toastCouldNotSave"));
     } finally {
       setSaving(false);
     }
@@ -140,9 +139,9 @@ export function JokerLibrary() {
       const next = jokers.filter((j) => j.id !== deleteTarget.id);
       await saveJokers(root, next);
       await refreshJokers();
-      toast.success(`Deleted "${deleteTarget.name}".`);
+      toast.success(t("jokers.toastDeleted", { name: deleteTarget.name }));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not delete joker.");
+      toast.error(err instanceof Error ? err.message : t("jokers.toastCouldNotDelete"));
     } finally {
       setDeleteTarget(undefined);
     }
@@ -152,21 +151,17 @@ export function JokerLibrary() {
     <div className="mx-auto max-w-4xl px-6 py-10">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Jokers</h1>
-          <p className="text-muted-foreground">
-            A shared library of power-ups. Turn them on per-quiz in Team Setup.
-          </p>
+          <h1 className="text-3xl font-semibold tracking-tight">{t("jokers.title")}</h1>
+          <p className="text-muted-foreground">{t("jokers.subtitle")}</p>
         </div>
         <Button size="lg" onClick={openCreate}>
-          + Create Joker
+          {t("jokers.createButton")}
         </Button>
       </div>
 
       {jokers.length === 0 && (
         <Card className="border-dashed">
-          <CardContent className="py-12 text-center text-muted-foreground">
-            No jokers yet. Create one, or start from a template below.
-          </CardContent>
+          <CardContent className="py-12 text-center text-muted-foreground">{t("jokers.noJokersYet")}</CardContent>
         </Card>
       )}
 
@@ -178,7 +173,7 @@ export function JokerLibrary() {
               <div className="flex-1">
                 <CardTitle>{joker.name}</CardTitle>
                 <Badge variant="outline" className="mt-1">
-                  {EFFECT_TYPE_LABELS[joker.effectType]}
+                  {t(EFFECT_TYPE_LABEL_KEYS[joker.effectType])}
                 </Badge>
               </div>
             </CardHeader>
@@ -186,10 +181,10 @@ export function JokerLibrary() {
               <p className="text-sm text-muted-foreground">{joker.description}</p>
               <div className="flex gap-2">
                 <Button size="sm" variant="secondary" onClick={() => openEdit(joker)}>
-                  Edit
+                  {t("jokers.edit")}
                 </Button>
                 <Button size="sm" variant="destructive" onClick={() => setDeleteTarget(joker)}>
-                  Delete
+                  {t("jokers.delete")}
                 </Button>
               </div>
             </CardContent>
@@ -200,25 +195,23 @@ export function JokerLibrary() {
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{form.id ? "Edit Joker" : "Create Joker"}</DialogTitle>
-            <DialogDescription>
-              Define a power-up teams can use during presentation mode.
-            </DialogDescription>
+            <DialogTitle>{form.id ? t("jokers.editDialogTitle") : t("jokers.createDialogTitle")}</DialogTitle>
+            <DialogDescription>{t("jokers.dialogDescription")}</DialogDescription>
           </DialogHeader>
 
           {!form.id && (
             <div className="space-y-2">
-              <Label>Start from a template</Label>
+              <Label>{t("jokers.startFromTemplateLabel")}</Label>
               <div className="flex flex-wrap gap-2">
                 {STARTER_TEMPLATES.map((template) => (
                   <Button
-                    key={template.name}
+                    key={template.nameKey}
                     type="button"
                     size="sm"
                     variant="outline"
                     onClick={() => applyTemplate(template)}
                   >
-                    {template.icon} {template.name}
+                    {template.icon} {t(template.nameKey)}
                   </Button>
                 ))}
               </div>
@@ -227,38 +220,38 @@ export function JokerLibrary() {
 
           <div className="grid grid-cols-[1fr_5rem] gap-3">
             <div className="space-y-2">
-              <Label htmlFor="joker-name">Name</Label>
+              <Label htmlFor="joker-name">{t("jokers.nameLabel")}</Label>
               <Input
                 id="joker-name"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Turbo Points"
+                placeholder={t("jokers.namePlaceholder")}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="joker-icon">Icon</Label>
+              <Label htmlFor="joker-icon">{t("jokers.iconLabel")}</Label>
               <Input
                 id="joker-icon"
                 value={form.icon}
                 onChange={(e) => setForm({ ...form, icon: e.target.value })}
-                placeholder="🔥"
+                placeholder={t("jokers.iconPlaceholder")}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="joker-desc">Description</Label>
+            <Label htmlFor="joker-desc">{t("jokers.descriptionLabel")}</Label>
             <Textarea
               id="joker-desc"
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="Short rule text shown to the host and players."
+              placeholder={t("jokers.descriptionPlaceholder")}
               rows={2}
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Effect</Label>
+            <Label>{t("jokers.effectLabel")}</Label>
             <Select
               value={form.effectType}
               onValueChange={(value) => setForm({ ...form, effectType: value as JokerEffectType })}
@@ -269,7 +262,7 @@ export function JokerLibrary() {
               <SelectContent>
                 {EFFECT_TYPES.map((type) => (
                   <SelectItem key={type} value={type}>
-                    {EFFECT_TYPE_LABELS[type]}
+                    {t(EFFECT_TYPE_LABEL_KEYS[type])}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -278,7 +271,7 @@ export function JokerLibrary() {
 
           {EFFECT_TYPES_NEEDING_MULTIPLIER.includes(form.effectType) && (
             <div className="space-y-2">
-              <Label htmlFor="joker-mult">Multiplier</Label>
+              <Label htmlFor="joker-mult">{t("jokers.multiplierLabel")}</Label>
               <Input
                 id="joker-mult"
                 type="number"
@@ -292,7 +285,7 @@ export function JokerLibrary() {
 
           {EFFECT_TYPES_NEEDING_PENALTY.includes(form.effectType) && (
             <div className="space-y-2">
-              <Label htmlFor="joker-penalty">Penalty fraction (0–1)</Label>
+              <Label htmlFor="joker-penalty">{t("jokers.penaltyLabel")}</Label>
               <Input
                 id="joker-penalty"
                 type="number"
@@ -306,9 +299,9 @@ export function JokerLibrary() {
           )}
 
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <DialogClose render={<Button variant="outline" />}>{t("common.cancel")}</DialogClose>
             <Button onClick={handleSave} disabled={!form.name.trim() || saving}>
-              {saving ? "Saving…" : "Save Joker"}
+              {saving ? t("jokers.savingButton") : t("jokers.saveButton")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -317,16 +310,13 @@ export function JokerLibrary() {
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(undefined)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete "{deleteTarget?.name}"?</DialogTitle>
-            <DialogDescription>
-              This removes the joker from the shared library. Quizzes that had it active will no
-              longer offer it.
-            </DialogDescription>
+            <DialogTitle>{t("jokers.deleteDialogTitle", { name: deleteTarget?.name ?? "" })}</DialogTitle>
+            <DialogDescription>{t("jokers.deleteDialogDescription")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <DialogClose render={<Button variant="outline" />}>{t("common.cancel")}</DialogClose>
             <Button variant="destructive" onClick={handleDelete}>
-              Delete
+              {t("jokers.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

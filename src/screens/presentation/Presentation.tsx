@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAppContext } from "@/context/AppContext";
+import { useTranslation } from "@/i18n/I18nContext";
 import { getIncomingSteals } from "@/lib/jokers";
 import { getQuizDir, loadQuestions, loadQuizMeta, loadTeams, saveTeams } from "@/lib/store";
 import { FinalSlide } from "@/screens/presentation/FinalSlide";
@@ -38,6 +39,7 @@ interface AppliedAward {
 
 export function Presentation({ slug }: PresentationProps) {
   const { root, jokers, navigate } = useAppContext();
+  const { t } = useTranslation();
 
   const [quizDir, setQuizDir] = useState<FileSystemDirectoryHandle | undefined>();
   const [meta, setMeta] = useState<QuizMeta | undefined>();
@@ -310,7 +312,7 @@ export function Presentation({ slug }: PresentationProps) {
           variant="outline"
           onClick={requestFullscreenManually}
         >
-          Enter Fullscreen
+          {t("presentation.enterFullscreenButton")}
         </Button>
       )}
 
@@ -376,17 +378,15 @@ export function Presentation({ slug }: PresentationProps) {
       <Dialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Exit presentation?</DialogTitle>
-            <DialogDescription>
-              You left fullscreen. Resume the presentation or end it and return to My Quizzes.
-            </DialogDescription>
+            <DialogTitle>{t("presentation.exitConfirmTitle")}</DialogTitle>
+            <DialogDescription>{t("presentation.exitConfirmDescription")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={handleResumeFullscreen}>
-              Resume Fullscreen
+              {t("presentation.resumeFullscreenButton")}
             </Button>
             <Button variant="destructive" onClick={handleEnd}>
-              End Presentation
+              {t("presentation.endPresentationButton")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,3 +1,4 @@
+import { useTranslation } from "@/i18n/I18nContext";
 import type { Team } from "@/types";
 
 interface ScoreboardPanelProps {
@@ -11,12 +12,13 @@ const RANK_STYLES = [
 ] as const;
 
 export function ScoreboardPanel({ teams }: ScoreboardPanelProps) {
+  const { t } = useTranslation();
   const sorted = [...teams].sort((a, b) => b.score - a.score);
 
   return (
     <aside className="flex w-64 shrink-0 flex-col border-l bg-card/40 p-4">
       <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Scoreboard
+        {t("presentation.scoreboardHeading")}
       </h3>
       <div className="flex flex-col gap-2 overflow-y-auto">
         {sorted.map((team, i) => {

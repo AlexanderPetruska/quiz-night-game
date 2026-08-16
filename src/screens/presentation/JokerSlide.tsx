@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslation } from "@/i18n/I18nContext";
 import { EFFECT_TYPES_NEEDING_TARGET } from "@/lib/jokers";
 import { SlideFrame } from "@/screens/presentation/SlideFrame";
 import { stopAdvance } from "@/screens/presentation/interaction";
@@ -21,6 +22,7 @@ interface PendingTarget {
 }
 
 export function JokerSlide({ question, teams, activeJokers, onInvoke, onUndo, onAdvance }: JokerSlideProps) {
+  const { t } = useTranslation();
   const [pending, setPending] = useState<PendingTarget | undefined>();
 
   function handleJokerClick(teamId: string, joker: Joker) {
@@ -39,8 +41,8 @@ export function JokerSlide({ question, teams, activeJokers, onInvoke, onUndo, on
 
   return (
     <SlideFrame slideKey={`joker-${question.id}`} onAdvance={onAdvance}>
-      <h2 className="mb-2 text-3xl font-semibold">Jokers</h2>
-      <p className="mb-8 text-muted-foreground">Any team may play a joker before the answer is revealed.</p>
+      <h2 className="mb-2 text-3xl font-semibold">{t("presentation.joker.heading")}</h2>
+      <p className="mb-8 text-muted-foreground">{t("presentation.joker.subtitle")}</p>
 
       <div className="grid w-full max-w-4xl grid-cols-1 gap-4 sm:grid-cols-2" onClick={stopAdvance}>
         {teams.map((team) => {
@@ -60,11 +62,11 @@ export function JokerSlide({ question, teams, activeJokers, onInvoke, onUndo, on
                 {isPickingForThisTeam ? (
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">
-                      {pending.joker.icon} {pending.joker.name} — choose a target team:
+                      {pending.joker.icon} {pending.joker.name} {t("presentation.joker.chooseTargetSuffix")}
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {teams.filter((t) => t.id !== team.id).length === 0 && (
-                        <p className="text-sm text-muted-foreground">No other teams to target.</p>
+                        <p className="text-sm text-muted-foreground">{t("presentation.joker.noOtherTeams")}</p>
                       )}
                       {teams
                         .filter((t) => t.id !== team.id)
@@ -74,24 +76,25 @@ export function JokerSlide({ question, teams, activeJokers, onInvoke, onUndo, on
                           </Button>
                         ))}
                       <Button variant="ghost" onClick={() => setPending(undefined)}>
-                        Cancel
+                        {t("presentation.joker.cancelButton")}
                       </Button>
                     </div>
                   </div>
                 ) : usedJoker ? (
                   <div className="flex items-center justify-between">
                     <p className="text-lg">
-                      {usedJoker.icon} Used <span className="font-medium">{usedJoker.name}</span>
+                      {usedJoker.icon} {t("presentation.joker.usedLabel")}{" "}
+                      <span className="font-medium">{usedJoker.name}</span>
                       {usedTargetName && (
                         <span className="text-muted-foreground"> → {usedTargetName}</span>
                       )}
                     </p>
                     <Button variant="ghost" size="sm" onClick={() => onUndo(team.id)}>
-                      Undo
+                      {t("presentation.joker.undoButton")}
                     </Button>
                   </div>
                 ) : activeJokers.length === 0 ? (
-                  <p className="text-muted-foreground">No jokers available.</p>
+                  <p className="text-muted-foreground">{t("presentation.joker.noJokersAvailable")}</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {activeJokers.map((joker) => {
@@ -100,12 +103,14 @@ export function JokerSlide({ question, teams, activeJokers, onInvoke, onUndo, on
                       return (
                         <Button key={joker.id} variant="outline" onClick={() => handleJokerClick(team.id, joker)}>
                           {joker.icon} {joker.name}{" "}
-                          <span className="ml-1 text-xs text-muted-foreground">({remaining} left)</span>
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            {t("presentation.joker.usesLeft", { count: remaining })}
+                          </span>
                         </Button>
                       );
                     })}
                     {activeJokers.every((j) => (team.jokersRemaining[j.id] ?? 0) <= 0) && (
-                      <p className="text-muted-foreground">No jokers remaining.</p>
+                      <p className="text-muted-foreground">{t("presentation.joker.noJokersRemaining")}</p>
                     )}
                   </div>
                 )}
@@ -123,7 +128,7 @@ export function JokerSlide({ question, teams, activeJokers, onInvoke, onUndo, on
           onAdvance();
         }}
       >
-        Continue
+        {t("presentation.joker.continueButton")}
       </Button>
     </SlideFrame>
   );

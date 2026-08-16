@@ -24,6 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppContext } from "@/context/AppContext";
+import { useTranslation } from "@/i18n/I18nContext";
 import {
   createQuiz,
   deleteQuiz,
@@ -45,6 +46,7 @@ type DeleteTarget = { kind: "quiz"; slug: string; name: string } | { kind: "orph
 
 export function MyQuizzes() {
   const { root, navigate, reportRootUnavailable } = useAppContext();
+  const { t } = useTranslation();
   const [quizzes, setQuizzes] = useState<QuizRow[]>([]);
   const [orphanedFolders, setOrphanedFolders] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,11 +66,7 @@ export function MyQuizzes() {
       setQuizzes(list);
       setOrphanedFolders(orphaned);
     } catch (err) {
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : "Your data folder isn't accessible anymore. Please choose it again.",
-      );
+      toast.error(err instanceof Error ? err.message : t("myQuizzes.toastDataFolderInaccessible"));
       reportRootUnavailable();
       return;
     } finally {
@@ -90,8 +88,8 @@ export function MyQuizzes() {
       setNewQuizOpen(false);
       setNewQuizName("");
       navigate({ name: "quizEditor", slug });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not create quiz.");
+    } catch {
+      toast.error(t("myQuizzes.toastCouldNotCreate"));
     } finally {
       setCreating(false);
     }
@@ -102,10 +100,10 @@ export function MyQuizzes() {
     try {
       await seedExampleQuiz(root);
       await refresh();
-      toast.success('Added "Example Quiz".');
+      toast.success(t("myQuizzes.toastAddedExample", { name: "Example Quiz" }));
     } catch (err) {
       const detail = err instanceof Error ? err.message : "unknown error";
-      toast.error(`Could not add the example quiz: ${detail}`);
+      toast.error(t("myQuizzes.toastCouldNotAddExample", { detail }));
     } finally {
       setSeedingExample(false);
     }
@@ -114,11 +112,11 @@ export function MyQuizzes() {
   async function handleDuplicate(slug: string) {
     setBusySlug(slug);
     try {
-      const { meta } = await duplicateQuiz(root, slug);
+      const { meta } = await duplicateQuiz(root, slug, t("myQuizzes.copySuffix"));
       await refresh();
-      toast.success(`Duplicated as "${meta.name}".`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not duplicate quiz.");
+      toast.success(t("myQuizzes.toastDuplicatedAs", { name: meta.name }));
+    } catch {
+      toast.error(t("myQuizzes.toastCouldNotDuplicate"));
     } finally {
       setBusySlug(undefined);
     }
@@ -128,10 +126,10 @@ export function MyQuizzes() {
     setBusySlug(slug);
     try {
       await exportQuiz(root, slug);
-      toast.success("Quiz exported.");
+      toast.success(t("myQuizzes.toastExported"));
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
-      toast.error(err instanceof Error ? err.message : "Could not export quiz.");
+      toast.error(t("myQuizzes.toastCouldNotExport"));
     } finally {
       setBusySlug(undefined);
     }
@@ -146,13 +144,13 @@ export function MyQuizzes() {
         multiple: false,
       });
       const file = await fileHandle.getFile();
-      const { slug, meta } = await importQuizFromZip(root, file);
+      const { slug, meta } = await importQuizFromZip(root, file, t("myQuizzes.importedFallbackName"));
       await refresh();
-      toast.success(`Imported "${meta.name}".`);
+      toast.success(t("myQuizzes.toastImportedAs", { name: meta.name }));
       navigate({ name: "quizEditor", slug });
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
-      toast.error(err instanceof Error ? err.message : "Could not import quiz.");
+      toast.error(t("myQuizzes.toastCouldNotImport"));
     } finally {
       setImporting(false);
     }
@@ -166,10 +164,12 @@ export function MyQuizzes() {
       setDeleteTarget(undefined);
       await refresh();
       toast.success(
-        deleteTarget.kind === "quiz" ? `Deleted "${deleteTarget.name}".` : `Deleted folder "${deleteTarget.slug}".`,
+        deleteTarget.kind === "quiz"
+          ? t("myQuizzes.toastDeletedQuiz", { name: deleteTarget.name })
+          : t("myQuizzes.toastDeletedFolder", { name: deleteTarget.slug }),
       );
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not delete.");
+    } catch {
+      toast.error(t("myQuizzes.toastCouldNotDelete"));
     } finally {
       setDeleting(false);
     }
@@ -181,32 +181,32 @@ export function MyQuizzes() {
     <div className="mx-auto max-w-5xl px-6 py-10">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">My Quizzes</h1>
-          <p className="text-muted-foreground">Create and manage your quiz nights.</p>
+          <h1 className="text-3xl font-semibold tracking-tight">{t("myQuizzes.title")}</h1>
+          <p className="text-muted-foreground">{t("myQuizzes.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           {!loading && !hasExampleQuiz && (
             <Button variant="outline" onClick={handleAddExample} disabled={seedingExample}>
-              {seedingExample ? "Adding…" : "+ Add Example Quiz"}
+              {seedingExample ? t("myQuizzes.addingExampleQuiz") : t("myQuizzes.addExampleQuiz")}
             </Button>
           )}
           <Button variant="outline" onClick={handleImport} disabled={importing}>
-            {importing ? "Importing…" : "Import Quiz"}
+            {importing ? t("myQuizzes.importingQuiz") : t("myQuizzes.importQuiz")}
           </Button>
           <Dialog open={newQuizOpen} onOpenChange={setNewQuizOpen}>
-            <DialogTrigger render={<Button size="lg" />}>+ New Quiz</DialogTrigger>
+            <DialogTrigger render={<Button size="lg" />}>{t("myQuizzes.newQuizButton")}</DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>New Quiz</DialogTitle>
-                <DialogDescription>Give your new quiz a name. You can rename it later.</DialogDescription>
+                <DialogTitle>{t("myQuizzes.newQuizDialogTitle")}</DialogTitle>
+                <DialogDescription>{t("myQuizzes.newQuizDialogDescription")}</DialogDescription>
               </DialogHeader>
               <div className="space-y-2">
-                <Label htmlFor="quiz-name">Quiz name</Label>
+                <Label htmlFor="quiz-name">{t("myQuizzes.quizNameLabel")}</Label>
                 <Input
                   id="quiz-name"
                   value={newQuizName}
                   onChange={(e) => setNewQuizName(e.target.value)}
-                  placeholder="e.g. Friday Night Trivia"
+                  placeholder={t("myQuizzes.quizNamePlaceholder")}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") void handleCreate();
                   }}
@@ -214,9 +214,9 @@ export function MyQuizzes() {
                 />
               </div>
               <DialogFooter>
-                <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+                <DialogClose render={<Button variant="outline" />}>{t("common.cancel")}</DialogClose>
                 <Button onClick={handleCreate} disabled={!newQuizName.trim() || creating}>
-                  {creating ? "Creating…" : "Create Quiz"}
+                  {creating ? t("myQuizzes.creatingQuizButton") : t("myQuizzes.createQuizButton")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -228,9 +228,7 @@ export function MyQuizzes() {
 
       {!loading && quizzes.length === 0 && (
         <Card className="border-dashed">
-          <CardContent className="py-12 text-center text-muted-foreground">
-            No quizzes yet. Click "+ New Quiz" to create your first one.
-          </CardContent>
+          <CardContent className="py-12 text-center text-muted-foreground">{t("myQuizzes.noQuizzesYet")}</CardContent>
         </Card>
       )}
 
@@ -242,18 +240,18 @@ export function MyQuizzes() {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                {quiz.summary.questionCount} question{quiz.summary.questionCount === 1 ? "" : "s"}
+                {t("myQuizzes.questionCount", { count: quiz.summary.questionCount })}
               </p>
             </CardContent>
             <CardFooter className="flex flex-wrap items-center gap-2">
               <Button variant="secondary" onClick={() => navigate({ name: "quizEditor", slug: quiz.slug })}>
-                Open / Edit
+                {t("myQuizzes.openEdit")}
               </Button>
               <Button
                 disabled={quiz.summary.questionCount === 0}
                 onClick={() => navigate({ name: "teamSetup", slug: quiz.slug })}
               >
-                Start Presentation
+                {t("myQuizzes.startPresentation")}
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger
@@ -262,8 +260,10 @@ export function MyQuizzes() {
                   <MoreVertical />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => handleDuplicate(quiz.slug)}>Duplicate</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleExport(quiz.slug)}>Export…</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleDuplicate(quiz.slug)}>
+                    {t("myQuizzes.duplicate")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport(quiz.slug)}>{t("myQuizzes.export")}</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     variant="destructive"
@@ -271,7 +271,7 @@ export function MyQuizzes() {
                       setDeleteTarget({ kind: "quiz", slug: quiz.slug, name: quiz.summary.meta.name })
                     }
                   >
-                    Delete
+                    {t("myQuizzes.delete")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -282,10 +282,9 @@ export function MyQuizzes() {
 
       {!loading && orphanedFolders.length > 0 && (
         <div className="mt-10">
-          <h2 className="mb-1 text-lg font-medium">Unrecognized folders</h2>
+          <h2 className="mb-1 text-lg font-medium">{t("myQuizzes.unrecognizedFoldersTitle")}</h2>
           <p className="mb-4 text-sm text-muted-foreground">
-            These folders are inside <code>quizzes/</code> but don't have a valid quiz.json — probably
-            leftovers from a previous crash or an edit outside the app. You can remove them here.
+            {t("myQuizzes.unrecognizedFoldersDescription", { path: "quizzes/" })}
           </p>
           <div className="space-y-2">
             {orphanedFolders.map((name) => (
@@ -297,7 +296,7 @@ export function MyQuizzes() {
                     variant="destructive"
                     onClick={() => setDeleteTarget({ kind: "orphan", slug: name })}
                   >
-                    Delete
+                    {t("myQuizzes.delete")}
                   </Button>
                 </CardContent>
               </Card>
@@ -310,16 +309,16 @@ export function MyQuizzes() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Delete "{deleteTarget?.kind === "quiz" ? deleteTarget.name : deleteTarget?.slug}"?
+              {t("myQuizzes.deleteDialogTitle", {
+                name: deleteTarget?.kind === "quiz" ? deleteTarget.name : (deleteTarget?.slug ?? ""),
+              })}
             </DialogTitle>
-            <DialogDescription>
-              This permanently deletes the folder and everything in it. This cannot be undone.
-            </DialogDescription>
+            <DialogDescription>{t("myQuizzes.deleteDialogDescription")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <DialogClose render={<Button variant="outline" />}>{t("common.cancel")}</DialogClose>
             <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? "Deleting…" : "Delete"}
+              {deleting ? t("myQuizzes.deletingButton") : t("myQuizzes.deleteButton")}
             </Button>
           </DialogFooter>
         </DialogContent>

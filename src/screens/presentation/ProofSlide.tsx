@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Spinner } from "@/components/Spinner";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/i18n/I18nContext";
 import { getProofFileUrl } from "@/lib/store";
 import { SlideFrame } from "@/screens/presentation/SlideFrame";
 import { stopAdvance } from "@/screens/presentation/interaction";
@@ -13,6 +14,7 @@ interface ProofSlideProps {
 }
 
 export function ProofSlide({ question, quizDir, onAdvance }: ProofSlideProps) {
+  const { t } = useTranslation();
   const [url, setUrl] = useState<string | undefined>();
   const [needsManualPlay, setNeedsManualPlay] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -65,7 +67,7 @@ export function ProofSlide({ question, quizDir, onAdvance }: ProofSlideProps) {
 
       {url && question.proofType === "image" && (
         <div className="flex h-svh w-full flex-col items-center justify-center gap-6">
-          <img src={url} alt="Proof" className="max-h-[80svh] max-w-full object-contain" />
+          <img src={url} alt={t("presentation.proof.altText")} className="max-h-[80svh] max-w-full object-contain" />
           <Button
             size="lg"
             onClick={(e) => {
@@ -73,7 +75,7 @@ export function ProofSlide({ question, quizDir, onAdvance }: ProofSlideProps) {
               onAdvance();
             }}
           >
-            Continue
+            {t("presentation.joker.continueButton")}
           </Button>
         </div>
       )}

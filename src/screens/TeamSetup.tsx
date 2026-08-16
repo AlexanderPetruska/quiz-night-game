@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppContext } from "@/context/AppContext";
+import { useTranslation } from "@/i18n/I18nContext";
 import { getQuizDir, loadQuizMeta, loadTeams, newId, saveQuizMeta, saveTeams } from "@/lib/store";
 import type { QuizMeta, Team } from "@/types";
 
@@ -35,23 +36,25 @@ function draftKey(slug: string): string {
   return `teamSetupDraft:${slug}`;
 }
 
-function defaultDraft(existingTeams: Team[] = []): Draft {
+function defaultDraft(existingTeams: Team[], defaultTeamName: (n: number) => string): Draft {
   const teams: DraftTeam[] =
     existingTeams.length > 0
       ? existingTeams.map((t) => ({ key: newId(), name: t.name, members: [...t.members], memberDraft: "" }))
       : [
-          { key: newId(), name: "Team 1", members: [], memberDraft: "" },
-          { key: newId(), name: "Team 2", members: [], memberDraft: "" },
+          { key: newId(), name: defaultTeamName(1), members: [], memberDraft: "" },
+          { key: newId(), name: defaultTeamName(2), members: [], memberDraft: "" },
         ];
   return { teams, jokerSettings: {} };
 }
 
 export function TeamSetup({ slug }: TeamSetupProps) {
   const { root, jokers, navigate } = useAppContext();
+  const { t } = useTranslation();
+  const defaultTeamName = (n: number) => t("teamSetup.defaultTeamName", { n });
   const [quizDir, setQuizDir] = useState<FileSystemDirectoryHandle | undefined>();
   const [meta, setMeta] = useState<QuizMeta | undefined>();
   const [loading, setLoading] = useState(true);
-  const [draft, setDraft] = useState<Draft>(defaultDraft());
+  const [draft, setDraft] = useState<Draft>(() => defaultDraft([], defaultTeamName));
   const [starting, setStarting] = useState(false);
 
   useEffect(() => {
@@ -69,7 +72,7 @@ export function TeamSetup({ slug }: TeamSetupProps) {
       if (stored) {
         setDraft(JSON.parse(stored) as Draft);
       } else {
-        const base = defaultDraft(existingTeams);
+        const base = defaultDraft(existingTeams, defaultTeamName);
         if (loadedMeta) {
           const jokerSettings: Record<string, JokerSetting> = {};
           for (const jokerId of loadedMeta.activeJokerIds) {
@@ -88,6 +91,7 @@ export function TeamSetup({ slug }: TeamSetupProps) {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [root, slug]);
 
   useEffect(() => {
@@ -103,7 +107,7 @@ export function TeamSetup({ slug }: TeamSetupProps) {
   function addTeam() {
     setDraft((d) => ({
       ...d,
-      teams: [...d.teams, { key: newId(), name: `Team ${d.teams.length + 1}`, members: [], memberDraft: "" }],
+      teams: [...d.teams, { key: newId(), name: defaultTeamName(d.teams.length + 1), members: [], memberDraft: "" }],
     }));
   }
 
@@ -184,8 +188,8 @@ export function TeamSetup({ slug }: TeamSetupProps) {
 
       sessionStorage.removeItem(draftKey(slug));
       navigate({ name: "presentation", slug });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not start presentation.");
+    } catch {
+      toast.error(t("teamSetup.toastCouldNotStart"));
     } finally {
       setStarting(false);
     }
@@ -198,14 +202,14 @@ export function TeamSetup({ slug }: TeamSetupProps) {
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
       <Button variant="ghost" className="mb-4 -ml-3" onClick={() => navigate({ name: "myQuizzes" })}>
-        ← Back to My Quizzes
+        {t("teamSetup.backButton")}
       </Button>
 
-      <h1 className="mb-1 text-3xl font-semibold tracking-tight">Team Setup</h1>
+      <h1 className="mb-1 text-3xl font-semibold tracking-tight">{t("teamSetup.title")}</h1>
       <p className="mb-8 text-muted-foreground">{meta?.name}</p>
 
       <div className="mb-6 space-y-4">
-        <h2 className="text-xl font-medium">Teams</h2>
+        <h2 className="text-xl font-medium">{t("teamSetup.teamsHeading")}</h2>
         {draft.teams.map((team) => (
           <Card key={team.key}>
             <CardContent className="space-y-3 py-4">
@@ -221,7 +225,7 @@ export function TeamSetup({ slug }: TeamSetupProps) {
                   onClick={() => removeTeam(team.key)}
                   disabled={draft.teams.length <= 1}
                 >
-                  Remove Team
+                  {t("teamSetup.removeTeamButton")}
                 </Button>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -245,7 +249,7 @@ export function TeamSetup({ slug }: TeamSetupProps) {
                 <Input
                   value={team.memberDraft}
                   onChange={(e) => updateTeam(team.key, { memberDraft: e.target.value })}
-                  placeholder="Member name"
+                  placeholder={t("teamSetup.memberPlaceholder")}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -254,25 +258,25 @@ export function TeamSetup({ slug }: TeamSetupProps) {
                   }}
                 />
                 <Button type="button" variant="outline" onClick={() => addMember(team.key)}>
-                  Add
+                  {t("teamSetup.addMemberButton")}
                 </Button>
               </div>
             </CardContent>
           </Card>
         ))}
         <Button variant="outline" onClick={addTeam}>
-          + Add Team
+          {t("teamSetup.addTeamButton")}
         </Button>
       </div>
 
       <div className="mb-8 space-y-4">
-        <h2 className="text-xl font-medium">Jokers for this quiz</h2>
+        <h2 className="text-xl font-medium">{t("teamSetup.jokersHeading")}</h2>
         {jokers.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="flex items-center justify-between py-6">
-              <p className="text-muted-foreground">No jokers in your library yet.</p>
+              <p className="text-muted-foreground">{t("teamSetup.noJokersMessage")}</p>
               <Button variant="secondary" onClick={() => navigate({ name: "jokers" })}>
-                + Create Joker
+                {t("teamSetup.createJokerButton")}
               </Button>
             </CardContent>
           </Card>
@@ -293,7 +297,7 @@ export function TeamSetup({ slug }: TeamSetupProps) {
                       {joker.name}
                     </Label>
                     <Label htmlFor={`uses-${joker.id}`} className="text-sm text-muted-foreground">
-                      Uses per team
+                      {t("teamSetup.usesPerTeamLabel")}
                     </Label>
                     <Input
                       id={`uses-${joker.id}`}
@@ -314,11 +318,11 @@ export function TeamSetup({ slug }: TeamSetupProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Ready?</CardTitle>
+          <CardTitle>{t("teamSetup.readyHeading")}</CardTitle>
         </CardHeader>
         <CardContent>
           <Button size="lg" onClick={handleStart} disabled={!canStart || starting}>
-            {starting ? "Starting…" : "Start Quiz"}
+            {starting ? t("teamSetup.startingButton") : t("teamSetup.startQuizButton")}
           </Button>
         </CardContent>
       </Card>

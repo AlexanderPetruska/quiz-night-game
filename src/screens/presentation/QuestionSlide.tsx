@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { useTranslation } from "@/i18n/I18nContext";
 import { SlideFrame } from "@/screens/presentation/SlideFrame";
 import type { Question } from "@/types";
 
@@ -43,16 +44,13 @@ function CountdownTimer({ seconds, onExpire }: { seconds: number; onExpire: () =
 }
 
 export function QuestionSlide({ question, index, total, timerSeconds, onAdvance }: QuestionSlideProps) {
+  const { t } = useTranslation();
   return (
     <SlideFrame slideKey={`question-${question.id}`} onAdvance={onAdvance}>
       <div className="mb-6 flex items-center gap-3 text-muted-foreground">
-        <span>
-          Question {index + 1}/{total}
-        </span>
+        <span>{t("presentation.question.counter", { index: index + 1, total })}</span>
         {question.category && <Badge variant="outline">{question.category}</Badge>}
-        <Badge>
-          {question.points} point{question.points === 1 ? "" : "s"}
-        </Badge>
+        <Badge>{t("presentation.question.pointsBadge", { count: question.points })}</Badge>
       </div>
 
       {timerSeconds !== undefined && timerSeconds > 0 && (
@@ -72,7 +70,7 @@ export function QuestionSlide({ question, index, total, timerSeconds, onAdvance 
       )}
 
       {question.type === "open" && (
-        <p className="text-2xl text-muted-foreground">✍️ Open answer — write it down!</p>
+        <p className="text-2xl text-muted-foreground">{t("presentation.question.openAnswerNotice")}</p>
       )}
     </SlideFrame>
   );

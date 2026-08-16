@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/i18n/I18nContext";
 import { SlideFrame } from "@/screens/presentation/SlideFrame";
 import type { Team } from "@/types";
 
@@ -8,12 +9,13 @@ interface FinalSlideProps {
 }
 
 export function FinalSlide({ teams, onEnd }: FinalSlideProps) {
+  const { t } = useTranslation();
   const sorted = [...teams].sort((a, b) => b.score - a.score);
   const topScore = sorted[0]?.score;
 
   return (
     <SlideFrame slideKey="final" onAdvance={() => {}} clickable={false}>
-      <h1 className="mb-10 text-5xl font-bold">Final Results</h1>
+      <h1 className="mb-10 text-5xl font-bold">{t("presentation.final.heading")}</h1>
       <div className="w-full max-w-2xl space-y-3">
         {sorted.map((team, i) => {
           const isWinner = team.score === topScore;
@@ -29,7 +31,7 @@ export function FinalSlide({ teams, onEnd }: FinalSlideProps) {
               <span className="font-semibold">
                 {i + 1}. {team.name} {isWinner && "🏆"}
               </span>
-              <span className="font-mono tabular-nums">{team.score} pts</span>
+              <span className="font-mono tabular-nums">{t("presentation.scorePts", { count: team.score })}</span>
             </div>
           );
         })}
@@ -42,7 +44,7 @@ export function FinalSlide({ teams, onEnd }: FinalSlideProps) {
           onEnd();
         }}
       >
-        End Presentation
+        {t("presentation.endPresentationButton")}
       </Button>
     </SlideFrame>
   );

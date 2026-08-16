@@ -1,3 +1,4 @@
+import { useTranslation } from "@/i18n/I18nContext";
 import { SlideFrame } from "@/screens/presentation/SlideFrame";
 import type { Team } from "@/types";
 
@@ -8,6 +9,7 @@ interface IntroSlideProps {
 }
 
 export function IntroSlide({ quizName, teams, onAdvance }: IntroSlideProps) {
+  const { t } = useTranslation();
   return (
     <SlideFrame slideKey="intro" onAdvance={onAdvance}>
       <h1 className="mb-10 text-center text-6xl font-bold tracking-tight">{quizName}</h1>
@@ -21,7 +23,7 @@ export function IntroSlide({ quizName, teams, onAdvance }: IntroSlideProps) {
           </div>
         ))}
       </div>
-      <p className="mt-16 text-muted-foreground">Click, press Space, or press → to begin</p>
+      <p className="mt-16 text-muted-foreground">{t("presentation.intro.clickToBegin")}</p>
     </SlideFrame>
   );
 }

@@ -30,3 +30,4 @@ The app needs to be served over `localhost` (not opened as a raw `file://` docum
 - **Duplicate, export, and import quizzes** — clone a quiz as a starting template, export one as a `.zip` to share or back up, and import one back in.
 - **Dark / light theme** — follows your system preference by default, with a toggle to override it.
 - **Example quiz** — a starter quiz with sample questions, mock proof images, and mock teams is available on first run (or on demand via "+ Add Example Quiz") so there's something to explore immediately.
+- **Interface localization** — the app's own UI (not quiz content) is available in English, Spanish, French, German, Portuguese, Italian, Slovak, and Czech, auto-detected from your browser on first load. The language switcher lets you curate which of those show up in your quick-switch menu, handy if you regularly host in just a few of them.

@@ -1,11 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useTranslation } from "@/i18n/I18nContext";
 import {
   computeAwardSuggestion,
   getIncomingFreezes,
   getIncomingSteals,
   jokerUsedForQuestion,
 } from "@/lib/jokers";
+import type { AwardNote } from "@/lib/jokers";
 import { SlideFrame } from "@/screens/presentation/SlideFrame";
 import { stopAdvance } from "@/screens/presentation/interaction";
 import type { Joker, Question, Team } from "@/types";
@@ -37,14 +39,24 @@ export function RevealSlide({
   onAdvance,
   isLast,
 }: RevealSlideProps) {
+  const { t } = useTranslation();
   const allScored = teams.every((t) => scoredTeamIds.has(t.id));
   const remaining = teams.length - scoredTeamIds.size;
 
   const hasRevealContent = question.type === "choice" || !!question.correctAnswerText;
 
+  function resolveNote(note: AwardNote | undefined): string | undefined {
+    if (!note) return undefined;
+    return "raw" in note ? note.raw : t(note.key, note.vars);
+  }
+
   return (
     <SlideFrame slideKey={`reveal-${question.id}`} onAdvance={onAdvance}>
-      {hasRevealContent && <h2 className="mb-6 text-2xl font-medium text-muted-foreground">Correct Answer</h2>}
+      {hasRevealContent && (
+        <h2 className="mb-6 text-2xl font-medium text-muted-foreground">
+          {t("presentation.reveal.correctAnswerHeading")}
+        </h2>
+      )}
 
       {question.type === "choice" && question.options && (
         <div className="mb-10 grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
@@ -81,37 +93,40 @@ export function RevealSlide({
           const freezes = getIncomingFreezes(team.id, question.id, teams, jokers);
           const steals = getIncomingSteals(team.id, question.id, teams, jokers);
           const isFrozen = freezes.length > 0;
+          const noteText = resolveNote(suggestion.note);
 
           return (
             <div key={team.id} className="rounded-xl border bg-card p-4">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-lg font-semibold">{team.name}</span>
-                <span className="text-muted-foreground">{team.score} pts</span>
+                <span className="text-muted-foreground">{t("presentation.scorePts", { count: team.score })}</span>
               </div>
 
               {isFrozen ? (
                 <div className="space-y-2">
                   <p className="text-sm text-cyan-400">
-                    🧊 Frozen by {freezes.map((f) => f.byTeam.name).join(", ")} — scores 0 this question.
+                    {t("presentation.reveal.frozenBy", { names: freezes.map((f) => f.byTeam.name).join(", ") })}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button size="sm" variant="secondary" disabled={scored} onClick={() => onAward(team.id, 0, "frozen")}>
-                      Award 0 (Frozen)
+                      {t("presentation.reveal.award0Frozen")}
                     </Button>
                     {scored && (
                       <Button size="sm" variant="ghost" onClick={() => onUndoAward(team.id)}>
-                        Undo
+                        {t("presentation.reveal.undoButton")}
                       </Button>
                     )}
                   </div>
                 </div>
               ) : (
                 <>
-                  {suggestion.note && <p className="mb-2 text-xs text-muted-foreground">{suggestion.note}</p>}
+                  {noteText && <p className="mb-2 text-xs text-muted-foreground">{noteText}</p>}
                   {steals.length > 0 && (
                     <p className="mb-2 text-xs text-amber-400">
-                      🥷 If incorrect, {steals.map((s) => s.byTeam.name).join(", ")} will steal {question.points}{" "}
-                      pt{question.points === 1 ? "" : "s"} from this team.
+                      {t("presentation.reveal.stealWarning", {
+                        names: steals.map((s) => s.byTeam.name).join(", "),
+                        count: question.points,
+                      })}
                     </p>
                   )}
 
@@ -123,7 +138,7 @@ export function RevealSlide({
                         onClick={() => onAward(team.id, suggestion.correctAmount, "correct")}
                         className="bg-green-600 text-white hover:bg-green-700"
                       >
-                        Correct +{suggestion.correctAmount}
+                        {t("presentation.reveal.correctButton", { amount: suggestion.correctAmount })}
                       </Button>
                       <Button
                         size="sm"
@@ -131,11 +146,13 @@ export function RevealSlide({
                         disabled={scored}
                         onClick={() => onAward(team.id, suggestion.incorrectAmount, "incorrect")}
                       >
-                        Incorrect {suggestion.incorrectAmount === 0 ? "+0" : suggestion.incorrectAmount}
+                        {t("presentation.reveal.incorrectButton", {
+                          amount: suggestion.incorrectAmount === 0 ? "+0" : suggestion.incorrectAmount,
+                        })}
                       </Button>
                       {scored && (
                         <Button size="sm" variant="ghost" onClick={() => onUndoAward(team.id)}>
-                          Undo
+                          {t("presentation.reveal.undoButton")}
                         </Button>
                       )}
                     </div>
@@ -144,7 +161,7 @@ export function RevealSlide({
                       <Input
                         type="number"
                         className="w-24"
-                        placeholder="±pts"
+                        placeholder={t("presentation.reveal.manualAmountPlaceholder")}
                         value={manualAmounts[team.id] ?? ""}
                         onChange={(e) => onManualAmountChange(team.id, e.target.value)}
                         disabled={scored}
@@ -154,11 +171,11 @@ export function RevealSlide({
                         disabled={scored || !manualAmounts[team.id]}
                         onClick={() => onAward(team.id, Number(manualAmounts[team.id]) || 0, "manual")}
                       >
-                        Apply
+                        {t("presentation.reveal.applyButton")}
                       </Button>
                       {scored && (
                         <Button size="sm" variant="ghost" onClick={() => onUndoAward(team.id)}>
-                          Undo
+                          {t("presentation.reveal.undoButton")}
                         </Button>
                       )}
                     </div>
@@ -172,7 +189,7 @@ export function RevealSlide({
 
       {!allScored && (
         <p className="mt-10 text-sm text-muted-foreground">
-          Score {remaining} more team{remaining === 1 ? "" : "s"} to continue.
+          {t("presentation.reveal.scoreMoreTeams", { count: remaining })}
         </p>
       )}
       <Button
@@ -184,7 +201,7 @@ export function RevealSlide({
           onAdvance();
         }}
       >
-        {isLast ? "See Results" : "Next Question"}
+        {isLast ? t("presentation.reveal.seeResultsButton") : t("presentation.reveal.nextQuestionButton")}
       </Button>
     </SlideFrame>
   );

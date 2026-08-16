@@ -125,6 +125,7 @@ export async function deleteQuiz(root: FileSystemDirectoryHandle, slug: string):
 export async function duplicateQuiz(
   root: FileSystemDirectoryHandle,
   sourceSlug: string,
+  copySuffix: string,
 ): Promise<{ slug: string; meta: QuizMeta }> {
   const sourceDir = await getQuizDir(root, sourceSlug);
   const sourceMeta = await loadQuizMeta(sourceDir);
@@ -133,7 +134,7 @@ export async function duplicateQuiz(
   const sourceProofDir = await getProofDir(sourceDir);
 
   const quizzesDir = await getQuizzesDir(root);
-  const newName = `${sourceMeta.name} (Copy)`;
+  const newName = `${sourceMeta.name}${copySuffix}`;
   const slug = await uniqueSlug(quizzesDir, newName);
   const newDir = await getOrCreateSubdir(quizzesDir, slug);
   const newProofDir = await getProofDir(newDir);
@@ -213,6 +214,7 @@ export async function exportQuiz(root: FileSystemDirectoryHandle, slug: string):
 export async function importQuizFromZip(
   root: FileSystemDirectoryHandle,
   zipFile: File,
+  fallbackName: string,
 ): Promise<{ slug: string; meta: QuizMeta }> {
   const buffer = new Uint8Array(await zipFile.arrayBuffer());
   let entries: Record<string, Uint8Array>;
@@ -238,11 +240,16 @@ export async function importQuizFromZip(
   }
 
   const quizzesDir = await getQuizzesDir(root);
-  const slug = await uniqueSlug(quizzesDir, importedMeta.name || "Imported Quiz");
+  const slug = await uniqueSlug(quizzesDir, importedMeta.name || fallbackName);
   const quizDir = await getOrCreateSubdir(quizzesDir, slug);
   const proofDir = await getProofDir(quizDir);
 
-  const meta: QuizMeta = { ...importedMeta, id: newId(), createdAt: new Date().toISOString() };
+  const meta: QuizMeta = {
+    ...importedMeta,
+    id: newId(),
+    name: importedMeta.name || fallbackName,
+    createdAt: new Date().toISOString(),
+  };
   await writeJson(quizDir, "quiz.json", meta);
   await writeJson(quizDir, "questions.json", importedQuestions);
 
