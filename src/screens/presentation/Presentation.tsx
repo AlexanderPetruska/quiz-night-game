@@ -23,7 +23,6 @@ import {
   playIncorrect,
   playJoker,
   setMusicEnabled,
-  setMusicMuted,
   setSoundEnabled,
   startMusic,
   stopMusic,
@@ -139,17 +138,12 @@ export function Presentation({ slug }: PresentationProps) {
     void saveTeams(quizDir, teams);
   }, [teams, loaded, quizDir]);
 
-  // Background music loop, running for the whole presentation. Muting is handled separately
-  // (below) by ramping its gain rather than stopping it, so toggling mute doesn't restart the beat.
+  // Background music loop. Off entirely (nothing scheduled) unless the host has it enabled.
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !musicOn) return;
     startMusic();
     return () => stopMusic();
-  }, [loaded]);
-
-  useEffect(() => {
-    setMusicMuted(!musicOn);
-  }, [musicOn]);
+  }, [loaded, musicOn]);
 
   // Fullscreen on entry.
   useEffect(() => {

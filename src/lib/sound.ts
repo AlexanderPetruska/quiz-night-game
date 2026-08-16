@@ -185,11 +185,18 @@ interface MusicState {
   schedulerId: number;
   nextStepTime: number;
   step: number;
-  muted: boolean;
   ducked: boolean;
 }
 
 let music: MusicState | undefined;
+
+/**
+ * Fixed anchor for step 0, set the first time the loop ever starts and never touched again.
+ * Restarting the loop (e.g. toggling the mute button off then on) computes where the beat would
+ * be *if it had kept playing since this epoch* instead of resetting to step 0, so muting and
+ * unmuting doesn't audibly jump back to the top of the bar.
+ */
+let musicEpoch: number | undefined;
 
 function pluck(
   audioCtx: AudioContext,
@@ -226,24 +233,20 @@ function scheduleMusicStep(audioCtx: AudioContext, destination: GainNode, step: 
   }
 }
 
-function targetMusicGain(state: MusicState): number {
-  if (state.muted) return 0;
-  return state.ducked ? MUSIC_DUCKED_GAIN : MUSIC_NORMAL_GAIN;
-}
-
 function applyMusicGain(state: MusicState): void {
   const audioCtx = getContext();
   if (!audioCtx) return;
+  const target = state.ducked ? MUSIC_DUCKED_GAIN : MUSIC_NORMAL_GAIN;
   state.gain.gain.cancelScheduledValues(audioCtx.currentTime);
   state.gain.gain.setValueAtTime(state.gain.gain.value, audioCtx.currentTime);
-  state.gain.gain.linearRampToValueAtTime(targetMusicGain(state), audioCtx.currentTime + GAIN_RAMP_SECONDS);
+  state.gain.gain.linearRampToValueAtTime(target, audioCtx.currentTime + GAIN_RAMP_SECONDS);
 }
 
 /**
- * Starts the background music loop for the presentation, if not already running. The loop keeps
- * playing continuously regardless of mute state — muting/unmuting (setMusicMuted) only ramps the
- * gain, it never stops or restarts the scheduler, so the beat doesn't jump back to the start of
- * the bar every time the host toggles it.
+ * Starts the background music loop, if not already running. Nothing is created or scheduled
+ * while music is off — this should only be called while it's meant to be audible — so there's no
+ * gain-node mute state that could momentarily leak sound. Resuming after stopMusic() picks the
+ * beat up from where it would be had it never stopped (see musicEpoch) instead of restarting it.
  */
 export function startMusic(): void {
   if (music) return;
@@ -251,18 +254,16 @@ export function startMusic(): void {
   if (!audioCtx) return;
 
   try {
+    if (musicEpoch === undefined) musicEpoch = audioCtx.currentTime;
+    const elapsedSteps = (audioCtx.currentTime - musicEpoch) / SIXTEENTH_SECONDS;
+    const step = Math.max(0, Math.ceil(elapsedSteps));
+    const nextStepTime = musicEpoch + step * SIXTEENTH_SECONDS;
+
     const gain = audioCtx.createGain();
     gain.gain.setValueAtTime(0, audioCtx.currentTime);
     gain.connect(audioCtx.destination);
 
-    const state: MusicState = {
-      gain,
-      schedulerId: 0,
-      nextStepTime: audioCtx.currentTime,
-      step: 0,
-      muted: !isMusicEnabled(),
-      ducked: false,
-    };
+    const state: MusicState = { gain, schedulerId: 0, nextStepTime, step, ducked: false };
     state.schedulerId = window.setInterval(() => {
       const ctxNow = getContext();
       if (!ctxNow) return;
@@ -279,7 +280,7 @@ export function startMusic(): void {
   }
 }
 
-/** Stops the background music loop entirely — call on leaving the presentation, not on mute. */
+/** Stops the background music loop — used both for muting and for leaving the presentation. */
 export function stopMusic(): void {
   if (!music) return;
   const { gain, schedulerId } = music;
@@ -292,13 +293,6 @@ export function stopMusic(): void {
   gain.gain.setValueAtTime(gain.gain.value, audioCtx.currentTime);
   gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
   window.setTimeout(() => gain.disconnect(), 350);
-}
-
-/** Mutes/unmutes the music in place — the loop keeps running, only its volume changes. */
-export function setMusicMuted(muted: boolean): void {
-  if (!music) return;
-  music.muted = muted;
-  applyMusicGain(music);
 }
 
 /** Lowers the music volume — used while a reveal/scoring slide has focus. */
