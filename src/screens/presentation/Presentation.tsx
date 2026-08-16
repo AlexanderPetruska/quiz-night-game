@@ -413,8 +413,14 @@ export function Presentation({ slug }: PresentationProps) {
 
       {showScoreboard && <ScoreboardPanel teams={teams} />}
 
-      <Dialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
-        <DialogContent className="sm:max-w-lg">
+      {/*
+        Forced choice: onOpenChange is intentionally a no-op so Escape, an outside click, or the
+        close button can't dismiss this without picking one of the two buttons below. Otherwise
+        the user ends up windowed with no dialog and no way back short of re-entering and
+        re-exiting fullscreen to retrigger it.
+      */}
+      <Dialog open={showExitConfirm} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-lg" showCloseButton={false}>
           <DialogHeader>
             <DialogTitle>{t("presentation.exitConfirmTitle")}</DialogTitle>
             <DialogDescription>{t("presentation.exitConfirmDescription")}</DialogDescription>
