@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Spinner } from "@/components/Spinner";
 import { Button } from "@/components/ui/button";
 import { getProofFileUrl } from "@/lib/store";
 import { SlideFrame } from "@/screens/presentation/SlideFrame";
@@ -42,7 +43,7 @@ export function ProofSlide({ question, quizDir, onAdvance }: ProofSlideProps) {
 
   return (
     <SlideFrame slideKey={`proof-${question.id}`} onAdvance={onAdvance} className="p-0">
-      {!url && <p className="text-muted-foreground">Loading proof…</p>}
+      {!url && <Spinner className="size-8" />}
 
       {url && question.proofType === "video" && (
         <div className="relative flex h-svh w-full items-center justify-center" onClick={stopAdvance}>

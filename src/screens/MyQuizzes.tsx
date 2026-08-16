@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { MoreVertical } from "lucide-react";
 import { toast } from "sonner";
+import { Spinner } from "@/components/Spinner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -223,7 +224,11 @@ export function MyQuizzes() {
         </div>
       </div>
 
-      {loading && <p className="text-muted-foreground">Loading quizzes…</p>}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <Spinner className="size-6" />
+        </div>
+      )}
 
       {!loading && quizzes.length === 0 && (
         <Card className="border-dashed">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Spinner } from "@/components/Spinner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -209,7 +210,11 @@ export function QuizEditor({ slug }: QuizEditorProps) {
   }
 
   if (loading) {
-    return <div className="p-10 text-muted-foreground">Loading quiz…</div>;
+    return (
+      <div className="flex items-center justify-center p-10">
+        <Spinner className="size-6" />
+      </div>
+    );
   }
 
   return (

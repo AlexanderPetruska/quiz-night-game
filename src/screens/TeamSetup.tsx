@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Spinner } from "@/components/Spinner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -191,7 +192,11 @@ export function TeamSetup({ slug }: TeamSetupProps) {
   }
 
   if (loading) {
-    return <div className="p-10 text-muted-foreground">Loading…</div>;
+    return (
+      <div className="flex items-center justify-center p-10">
+        <Spinner className="size-6" />
+      </div>
+    );
   }
 
   return (
