@@ -153,8 +153,10 @@ export function playFanfare(): void {
 
 const MUSIC_ENABLED_KEY = "quiz-night-music-enabled";
 
+/** Opt-in, unlike sound effects — background music is a bigger, more opinionated addition, so it
+ * stays off until the host explicitly turns it on via the toggle in presentation mode. */
 export function isMusicEnabled(): boolean {
-  return localStorage.getItem(MUSIC_ENABLED_KEY) !== "false";
+  return localStorage.getItem(MUSIC_ENABLED_KEY) === "true";
 }
 
 export function setMusicEnabled(enabled: boolean): void {
