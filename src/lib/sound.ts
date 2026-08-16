@@ -145,10 +145,10 @@ export function playFanfare(): void {
 }
 
 /**
- * Looping background music, synthesized like everything else here — a bouncy bassline, a
- * syncopated arpeggio, and off-beat clicks over an upbeat I–vi–IV–V progression. Uses the
- * standard "lookahead" scheduling technique (poll frequently, schedule notes into the Web Audio
- * clock slightly ahead of time) so the loop stays tight regardless of JS timer jitter.
+ * Looping background music, synthesized like everything else here — a bouncy bassline under a
+ * syncopated arpeggio, over an upbeat I–vi–IV–V progression. Uses the standard "lookahead"
+ * scheduling technique (poll frequently, schedule notes into the Web Audio clock slightly ahead
+ * of time) so the loop stays tight regardless of JS timer jitter.
  */
 
 const MUSIC_ENABLED_KEY = "quiz-night-music-enabled";
@@ -221,8 +221,6 @@ function scheduleMusicStep(audioCtx: AudioContext, destination: GainNode, step: 
   if (stepInBar % 2 === 0) {
     const note = bar.arp[(stepInBar / 2) % bar.arp.length];
     pluck(audioCtx, destination, time, note, SIXTEENTH_SECONDS * 1.6, "square", 0.35);
-  } else {
-    pluck(audioCtx, destination, time, 1760, SIXTEENTH_SECONDS * 0.6, "sine", 0.12);
   }
 }
 
