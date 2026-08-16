@@ -229,6 +229,7 @@ const de: Record<TranslationKey, string> = {
   "presentation.joker.subtitle": "Jedes Team darf einen Joker einsetzen, bevor die Antwort aufgelöst wird.",
   "presentation.joker.chooseTargetSuffix": "— Zielteam auswählen:",
   "presentation.joker.noOtherTeams": "Kein anderes Team als Ziel verfügbar.",
+  "presentation.joker.alreadySwappedSuffix": "(bereits getauscht)",
   "presentation.joker.cancelButton": "Abbrechen",
   "presentation.joker.usedLabel": "Eingesetzt:",
   "presentation.joker.undoButton": "Rückgängig",

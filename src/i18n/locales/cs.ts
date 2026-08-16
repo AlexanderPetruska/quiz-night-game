@@ -228,6 +228,7 @@ const cs: Record<TranslationKey, string> = {
   "presentation.joker.subtitle": "Kterýkoli tým může použít žolíka před odhalením odpovědi.",
   "presentation.joker.chooseTargetSuffix": "— vyberte cílový tým:",
   "presentation.joker.noOtherTeams": "Žádný jiný tým k zacílení.",
+  "presentation.joker.alreadySwappedSuffix": "(už vyměněno)",
   "presentation.joker.cancelButton": "Zrušit",
   "presentation.joker.usedLabel": "Použil",
   "presentation.joker.undoButton": "Zpět",

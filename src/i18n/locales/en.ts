@@ -225,6 +225,7 @@ const en = {
   "presentation.joker.subtitle": "Any team may play a joker before the answer is revealed.",
   "presentation.joker.chooseTargetSuffix": "— choose a target team:",
   "presentation.joker.noOtherTeams": "No other teams to target.",
+  "presentation.joker.alreadySwappedSuffix": "(already swapped)",
   "presentation.joker.cancelButton": "Cancel",
   "presentation.joker.usedLabel": "Used",
   "presentation.joker.undoButton": "Undo",

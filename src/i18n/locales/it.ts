@@ -229,6 +229,7 @@ const it: Record<TranslationKey, string> = {
   "presentation.joker.subtitle": "Ogni squadra può usare un jolly prima che la risposta venga rivelata.",
   "presentation.joker.chooseTargetSuffix": "— scegli una squadra bersaglio:",
   "presentation.joker.noOtherTeams": "Nessun'altra squadra da colpire.",
+  "presentation.joker.alreadySwappedSuffix": "(già scambiato)",
   "presentation.joker.cancelButton": "Annulla",
   "presentation.joker.usedLabel": "Usato",
   "presentation.joker.undoButton": "Annulla",

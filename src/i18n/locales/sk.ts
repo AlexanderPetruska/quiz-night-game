@@ -227,6 +227,7 @@ const sk: Record<TranslationKey, string> = {
   "presentation.joker.subtitle": "Ktorýkoľvek tím môže použiť žolíka pred odhalením odpovede.",
   "presentation.joker.chooseTargetSuffix": "— vyberte cieľový tím:",
   "presentation.joker.noOtherTeams": "Žiadny iný tím na zacielenie.",
+  "presentation.joker.alreadySwappedSuffix": "(už vymenené)",
   "presentation.joker.cancelButton": "Zrušiť",
   "presentation.joker.usedLabel": "Použil",
   "presentation.joker.undoButton": "Vrátiť späť",

@@ -149,6 +149,27 @@ export function getIncomingSteals(
   return incomingTargetedJokers(targetTeamId, questionId, teams, jokers, "steal");
 }
 
+/**
+ * Whether a scoreSwap has ever happened between these two teams (in either direction), across
+ * the whole game so far. Once a pair has swapped, neither may target the other with scoreSwap
+ * again — otherwise a team could immediately swap back and undo the other team's play for free.
+ */
+export function hasSwappedWith(teamAId: string, teamBId: string, teams: Team[], jokers: Joker[]): boolean {
+  for (const owner of teams) {
+    if (owner.id !== teamAId && owner.id !== teamBId) continue;
+    for (const entry of owner.jokerLog) {
+      if (!entry.targetTeamId) continue;
+      const pairMatches =
+        (owner.id === teamAId && entry.targetTeamId === teamBId) ||
+        (owner.id === teamBId && entry.targetTeamId === teamAId);
+      if (!pairMatches) continue;
+      const joker = jokers.find((j) => j.id === entry.jokerId);
+      if (joker?.effectType === "scoreSwap") return true;
+    }
+  }
+  return false;
+}
+
 export function computeAwardSuggestion(question: Question, joker: Joker | undefined): AwardSuggestion {
   const points = question.points;
 

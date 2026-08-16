@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTranslation } from "@/i18n/I18nContext";
-import { EFFECT_TYPES_NEEDING_TARGET } from "@/lib/jokers";
+import { EFFECT_TYPES_NEEDING_TARGET, hasSwappedWith } from "@/lib/jokers";
 import { SlideFrame } from "@/screens/presentation/SlideFrame";
 import { stopAdvance } from "@/screens/presentation/interaction";
 import type { Joker, Question, Team } from "@/types";
@@ -90,11 +90,26 @@ export function JokerSlide({
                       )}
                       {teams
                         .filter((t) => t.id !== team.id)
-                        .map((target) => (
-                          <Button key={target.id} variant="outline" onClick={() => handlePickTarget(target.id)}>
-                            {target.name}
-                          </Button>
-                        ))}
+                        .map((target) => {
+                          const blocked =
+                            pending.joker.effectType === "scoreSwap" &&
+                            hasSwappedWith(team.id, target.id, teams, activeJokers);
+                          return (
+                            <Button
+                              key={target.id}
+                              variant="outline"
+                              disabled={blocked}
+                              onClick={() => handlePickTarget(target.id)}
+                            >
+                              {target.name}
+                              {blocked && (
+                                <span className="ml-1 text-xs text-muted-foreground">
+                                  {t("presentation.joker.alreadySwappedSuffix")}
+                                </span>
+                              )}
+                            </Button>
+                          );
+                        })}
                       <Button variant="ghost" onClick={() => setPending(undefined)}>
                         {t("presentation.joker.cancelButton")}
                       </Button>

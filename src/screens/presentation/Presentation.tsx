@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { useAppContext } from "@/context/AppContext";
 import { useTranslation } from "@/i18n/I18nContext";
-import { getIncomingSteals } from "@/lib/jokers";
+import { getIncomingSteals, hasSwappedWith } from "@/lib/jokers";
 import {
   isSoundEnabled,
   playConfirm,
@@ -178,6 +178,7 @@ export function Presentation({ slug }: PresentationProps) {
     if (minScore !== undefined && (invokingTeam?.score ?? 0) < minScore) return;
 
     const isScoreSwap = joker?.effectType === "scoreSwap" && !!targetTeamId;
+    if (isScoreSwap && targetTeamId && hasSwappedWith(teamId, targetTeamId, teams, jokers)) return;
 
     setTeams((ts) => {
       const invoker = ts.find((t) => t.id === teamId);

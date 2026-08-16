@@ -228,6 +228,7 @@ const es: Record<TranslationKey, string> = {
   "presentation.joker.subtitle": "Cualquier equipo puede usar un comodín antes de que se revele la respuesta.",
   "presentation.joker.chooseTargetSuffix": "— elige un equipo objetivo:",
   "presentation.joker.noOtherTeams": "No hay otros equipos a los que apuntar.",
+  "presentation.joker.alreadySwappedSuffix": "(ya intercambiado)",
   "presentation.joker.cancelButton": "Cancelar",
   "presentation.joker.usedLabel": "Usó",
   "presentation.joker.undoButton": "Deshacer",

@@ -229,6 +229,7 @@ const pt: Record<TranslationKey, string> = {
   "presentation.joker.subtitle": "Qualquer equipa pode usar um joker antes de a resposta ser revelada.",
   "presentation.joker.chooseTargetSuffix": "— escolha uma equipa alvo:",
   "presentation.joker.noOtherTeams": "Não há outras equipas para visar.",
+  "presentation.joker.alreadySwappedSuffix": "(já trocado)",
   "presentation.joker.cancelButton": "Cancelar",
   "presentation.joker.usedLabel": "Usou",
   "presentation.joker.undoButton": "Desfazer",
