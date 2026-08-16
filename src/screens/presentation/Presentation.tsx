@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { SVGProps } from "react";
 import { Music4, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +23,7 @@ import {
   playIncorrect,
   playJoker,
   setMusicEnabled,
+  setMusicMuted,
   setSoundEnabled,
   startMusic,
   stopMusic,
@@ -42,6 +44,29 @@ import type { Question, QuizMeta, Team } from "@/types";
 
 interface PresentationProps {
   slug: string;
+}
+
+/** lucide-react has no "music off" icon; drawn to match Music4 plus the diagonal strike every
+ * other lucide "-off" icon (MicOff, BellOff, ...) uses, so the mute toggle reads the same way. */
+function MusicOffIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M9 18V5l12-2v13" />
+      <path d="m9 9 12-2" />
+      <circle cx="6" cy="18" r="3" />
+      <circle cx="18" cy="16" r="3" />
+      <path d="m2 2 20 20" />
+    </svg>
+  );
 }
 
 function keyFor(questionId: string, teamId: string): string {
@@ -114,12 +139,17 @@ export function Presentation({ slug }: PresentationProps) {
     void saveTeams(quizDir, teams);
   }, [teams, loaded, quizDir]);
 
-  // Background music loop, on for the whole presentation.
+  // Background music loop, running for the whole presentation. Muting is handled separately
+  // (below) by ramping its gain rather than stopping it, so toggling mute doesn't restart the beat.
   useEffect(() => {
-    if (!loaded || !musicOn) return;
+    if (!loaded) return;
     startMusic();
     return () => stopMusic();
-  }, [loaded, musicOn]);
+  }, [loaded]);
+
+  useEffect(() => {
+    setMusicMuted(!musicOn);
+  }, [musicOn]);
 
   // Fullscreen on entry.
   useEffect(() => {
@@ -385,10 +415,9 @@ export function Presentation({ slug }: PresentationProps) {
           variant="outline"
           onClick={toggleMusic}
           aria-pressed={musicOn}
-          className={musicOn ? undefined : "opacity-40"}
           aria-label={t(musicOn ? "presentation.muteMusicButton" : "presentation.unmuteMusicButton")}
         >
-          <Music4 />
+          {musicOn ? <Music4 /> : <MusicOffIcon />}
         </Button>
       </div>
 

@@ -183,6 +183,8 @@ interface MusicState {
   schedulerId: number;
   nextStepTime: number;
   step: number;
+  muted: boolean;
+  ducked: boolean;
 }
 
 let music: MusicState | undefined;
@@ -224,19 +226,43 @@ function scheduleMusicStep(audioCtx: AudioContext, destination: GainNode, step: 
   }
 }
 
-/** Starts the background music loop, if enabled and not already running. */
+function targetMusicGain(state: MusicState): number {
+  if (state.muted) return 0;
+  return state.ducked ? MUSIC_DUCKED_GAIN : MUSIC_NORMAL_GAIN;
+}
+
+function applyMusicGain(state: MusicState): void {
+  const audioCtx = getContext();
+  if (!audioCtx) return;
+  state.gain.gain.cancelScheduledValues(audioCtx.currentTime);
+  state.gain.gain.setValueAtTime(state.gain.gain.value, audioCtx.currentTime);
+  state.gain.gain.linearRampToValueAtTime(targetMusicGain(state), audioCtx.currentTime + GAIN_RAMP_SECONDS);
+}
+
+/**
+ * Starts the background music loop for the presentation, if not already running. The loop keeps
+ * playing continuously regardless of mute state — muting/unmuting (setMusicMuted) only ramps the
+ * gain, it never stops or restarts the scheduler, so the beat doesn't jump back to the start of
+ * the bar every time the host toggles it.
+ */
 export function startMusic(): void {
-  if (!isMusicEnabled() || music) return;
+  if (music) return;
   const audioCtx = getContext();
   if (!audioCtx) return;
 
   try {
     const gain = audioCtx.createGain();
     gain.gain.setValueAtTime(0, audioCtx.currentTime);
-    gain.gain.linearRampToValueAtTime(MUSIC_NORMAL_GAIN, audioCtx.currentTime + GAIN_RAMP_SECONDS);
     gain.connect(audioCtx.destination);
 
-    const state: MusicState = { gain, schedulerId: 0, nextStepTime: audioCtx.currentTime, step: 0 };
+    const state: MusicState = {
+      gain,
+      schedulerId: 0,
+      nextStepTime: audioCtx.currentTime,
+      step: 0,
+      muted: !isMusicEnabled(),
+      ducked: false,
+    };
     state.schedulerId = window.setInterval(() => {
       const ctxNow = getContext();
       if (!ctxNow) return;
@@ -247,12 +273,13 @@ export function startMusic(): void {
       }
     }, SCHEDULER_INTERVAL_MS);
     music = state;
+    applyMusicGain(state);
   } catch {
     // Background music is a nice-to-have — never let a scheduling error affect the presentation.
   }
 }
 
-/** Stops the background music loop, fading out briefly rather than cutting off abruptly. */
+/** Stops the background music loop entirely — call on leaving the presentation, not on mute. */
 export function stopMusic(): void {
   if (!music) return;
   const { gain, schedulerId } = music;
@@ -267,21 +294,23 @@ export function stopMusic(): void {
   window.setTimeout(() => gain.disconnect(), 350);
 }
 
+/** Mutes/unmutes the music in place — the loop keeps running, only its volume changes. */
+export function setMusicMuted(muted: boolean): void {
+  if (!music) return;
+  music.muted = muted;
+  applyMusicGain(music);
+}
+
 /** Lowers the music volume — used while a reveal/scoring slide has focus. */
 export function duckMusic(): void {
-  rampMusicGain(MUSIC_DUCKED_GAIN);
+  if (!music) return;
+  music.ducked = true;
+  applyMusicGain(music);
 }
 
 /** Restores the music volume after duckMusic(). */
 export function unduckMusic(): void {
-  rampMusicGain(MUSIC_NORMAL_GAIN);
-}
-
-function rampMusicGain(target: number): void {
   if (!music) return;
-  const audioCtx = getContext();
-  if (!audioCtx) return;
-  music.gain.gain.cancelScheduledValues(audioCtx.currentTime);
-  music.gain.gain.setValueAtTime(music.gain.gain.value, audioCtx.currentTime);
-  music.gain.gain.linearRampToValueAtTime(target, audioCtx.currentTime + GAIN_RAMP_SECONDS);
+  music.ducked = false;
+  applyMusicGain(music);
 }
