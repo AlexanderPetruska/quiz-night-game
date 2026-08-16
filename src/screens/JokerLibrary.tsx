@@ -257,7 +257,7 @@ export function JokerLibrary() {
               onValueChange={(value) => setForm({ ...form, effectType: value as JokerEffectType })}
             >
               <SelectTrigger className="w-full">
-                <SelectValue />
+                <SelectValue>{(value: JokerEffectType) => t(EFFECT_TYPE_LABEL_KEYS[value])}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {EFFECT_TYPES.map((type) => (
